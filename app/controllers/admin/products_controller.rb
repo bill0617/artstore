@@ -1,4 +1,6 @@
 class Admin::ProductsController < ApplicationController
+
+  layout "admin"
   before_action :authenticate_user!
   before_action :admin_required
   def index
@@ -8,11 +10,11 @@ class Admin::ProductsController < ApplicationController
 
   def new
     @product = Product.new
+    @photo = @product.build_photo
   end
 
   def create
     @product = Product.new(product_params)
-    @photo = @product.build_photo
 
     if @product.save
       redirect_to admin_products_path

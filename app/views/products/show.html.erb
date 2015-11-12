@@ -1,0 +1,19 @@
+<div>
+  <div>
+    <%= image_tag(@product.photo.image.medium.url, class: "thumbnail") %>
+  </div>
+  <div>
+    <h2> <%= @product.title %> </h2>
+    <div>
+      <p>
+       <%= @product.description %>
+      </p>
+    </div>
+    <div> 數量 : <%= @product.quantity %> </div>
+    <div> $ <%= @product.price %> </div>
+    <div>
+      <%= link_to("加入購物車", "#", :class => "btn btn-primary btn-lg btn-danger") %>
+    </div>
+  </div>
+</div>
+
