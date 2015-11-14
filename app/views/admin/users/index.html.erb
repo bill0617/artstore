@@ -1,0 +1,38 @@
+<h2>User List</h2>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>User Account</th>
+      <th>Status</th>
+      <th colspan="2">Option</th>
+
+    </tr>
+  </thead>
+  <tbody>
+    <% @users.each_with_index do |user, i| %>
+      <tr>
+        <td>
+          <%= i+1 %>
+        </td>
+        <td>
+          <%= user.email %>
+        </td>
+        <% if !user.is_admin? %>
+        <td>
+          一般會員
+        </td>
+
+        <td colspan="2"><%= link_to("轉為管理員", admin_user_to_admin_path(user), class: "btn btn-warning btn-sm", method: :post) %></td>
+        <% else %>
+        <td>
+          管理員
+        </td>
+        <td colspan="2"><%= link_to("轉為一般會員", admin_user_to_normal_path(user), class: "btn btn-info btn-sm", method: :post) %></td>
+        <% end %>
+
+      </tr>
+    <% end %>
+  </tbody>
+</table>

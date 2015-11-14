@@ -1,0 +1,26 @@
+<%= simple_form_for [:admin, @product] do |f| %>
+
+<div class="group">
+  <%= f.input :title, label: "商品名稱" %>
+</div>
+
+<div class="group-de">
+  <%= f.input :description, label: "商品描述" %>
+</div>
+
+<div class="group">
+  <%= f.input :quantity, label: "商品數量" %>
+</div>
+
+<div class="group">
+  <%= f.input :price, label: "商品價錢" %>
+</div>
+<div>
+<%= f.input :image, as: :file %>
+</div>
+<%= f.submit "新增", data: {disable_with: "Submitting"}, class: "btn btn-success btn-lg"  %>
+
+<% end %>
+
+
+<!-- , html: { multipart: true } -->

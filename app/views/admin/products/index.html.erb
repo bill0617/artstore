@@ -1,0 +1,39 @@
+<h2>商品列表Product List</h2>
+
+<div class="pull-right" style="padding-bottom: 20px">
+<br>
+<%= link_to("新增產品", new_admin_product_path, class: "btn btn-primary" ) %>
+</div>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th width="220">商品圖片</th>
+      <th>商品名稱</th>
+      <th>價錢</th>
+      <th>ＯＰＴＩＯＮ</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @products.each do |product| %>
+      <tr>
+        <td>
+          <%= product.id %>
+        </td>
+        <td>
+          <%= image_tag(product.image.url(:thumb), class: "thumbnail") %>
+        </td>
+        <td>
+          <%= product.title %>
+        </td>
+        <td>
+          <%= product.price %>
+        </td>
+        <td><%= link_to("編輯", edit_admin_product_path(product), class: "btn btn-warning") %>
+            <%= link_to("刪除", "#", class: "btn btn-danger pull-right") %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
