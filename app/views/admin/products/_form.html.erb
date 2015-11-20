@@ -16,6 +16,12 @@
   <%= f.input :price %>
 </div>
 
+<div class="picture_upload">
+  <%= f.simple_fields_for :photo do |c| %>
+  <%= c.input :image, as: :file %>
+  <% end %>
+</div>
+
 <%= f.submit "送出", data: {disable_with: "Submitting"} %>
 
 <% end %>
