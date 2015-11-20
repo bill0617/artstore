@@ -17,7 +17,7 @@ class Admin::ProductsController < ApplicationController
     @product = Product.create(product_params)
 
     if @product.save
-      redirect_to products_path
+      redirect_to products_path, notice: "成功新增"
     else
       render :new
     end
