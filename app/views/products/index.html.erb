@@ -1,0 +1,17 @@
+<div class="row">
+  <% @products.each do |product| %>
+  <div class="col-xs-6 col-md-3">
+    <%= link_to product_path(product), class: "thumbnail" do  %>
+      <% if product.photo.present? %>
+        <%= image_tag(product.photo.image.thumb.url) %>
+      <% else %>
+        <%= image_tag("http://placehold.it/200x200&text=No Pic") %>
+      <% end %>
+    <% end %>
+    <span style="font-weight:bold"><%= product.title %></span> <br>$
+    <span style="font-size:16px; color:green">
+    <%= product.price %>
+    </span>
+  </div>
+  <% end %>
+</div>
