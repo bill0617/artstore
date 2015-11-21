@@ -1,0 +1,49 @@
+<div class="row">
+  <div class="col-md-12">
+    <h2>購物車明細</h2>
+    <p style="padding-bottom:0.5cm;"><%= link_to "清空購物車", "#", class: "btn btn-warning btn-xs pull-right"  %></p>
+
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th colspan="2">商品資訊</th>
+          <th>數量</th>
+          <th width="90">單價</th>
+          <th>Option</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @products.each do |product| %>
+        <tr>
+          <td>
+            <%= link_to product_path(product) do %>
+            <% if product.photo.present? %>
+              <%= image_tag(product.photo.image.thumb.url, class: "thumbnail")  %>
+            <% else %>
+              <%= image_tag("http://placehold.it/200x200&text=No Pic", class: "thumbnail") %>
+            <% end %>
+            <% end %>
+          </td>
+          <td><span style="font-size:22px;"><%= link_to product.title, product_path(product) %></span>
+
+          </td>
+          <td><%= product.quantity %></td>
+          <td><%= product.price %></td>
+          <td><%= link_to "刪除", "#", class: "btn btn-info btn-xs" %></td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+
+    <div class="clearfix">
+      <span class="pull-right">總計:
+        <span style="font-size:22px; color:red"><%=render_cart_total_price(current_cart) %> </span>
+        NTD</span>
+    </div>
+    <hr>
+    <div>
+      <%= link_to "確認結賬", "#", method: :post, class: "btn btn-success pull-right"  %>
+    </div>
+  </div>
+</div>
