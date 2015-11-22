@@ -16,7 +16,11 @@
     <div> 數量 : <%= @product.quantity %> </div>
     <div class="product-price"> $ <%= @product.price %> </div>
     <div class="pull-right">
+    <% if @product.quantity > 0 %>
       <%= link_to("加入購物車", add_cart_product_path(@product), method: :post, :class => "btn btn-danger btn-lg") %>
+    <% else %>
+    <span class="sale_out">此商品目前無庫存</span>
+      <% end %>
     </div>
   </div>
 </div>

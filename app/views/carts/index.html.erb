@@ -31,7 +31,7 @@
           <td><span style="font-size:22px;"><%= link_to product.title, product_path(product) %></span>
 
           </td>
-          <% item = current_cart.cart_items.find_by(product_id: product) %>
+          <% item = current_cart.find_cart_item(product) %>
           <td>
             <%= form_for item, url: item_path(product) do |f| %>
             <%= f.select :quantity, 1..product.quantity %>

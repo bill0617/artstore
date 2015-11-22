@@ -1,0 +1,2569 @@
+Searching 863 files for "def"
+
+/Users/BILL0617/projects/workspace/artstore/.gitignore:
+    8  /.bundle
+    9
+   10: # Ignore the default SQLite database.
+   11  /db/*.sqlite3
+   12  /db/*.sqlite3-journal
+
+/Users/BILL0617/projects/workspace/artstore/app/assets/stylesheets/application.css.scss:
+    7   *
+    8   * You're free to add application-wide styles to this file and they'll appear at the bottom of the
+    9:  * compiled file so the styles you add here take precedence over styles defined in any styles
+   10:  * defined in the other CSS/SCSS files in this directory. It is generally better to create a new
+   11   * file per style scope.
+   12   *
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/application_controller.rb:
+    6     helper_method :current_cart
+    7
+    8:   def admin_required
+    9      if !current_user.admin?
+   10        redirect_to "/"
+   ..
+   12    end
+   13
+   14:   def current_cart
+   15      @current_cart ||= find_cart
+   16
+   ..
+   20  private
+   21
+   22:   def find_cart
+   23      cart = Cart.find_by(id: session[:cart_id]) || Cart.create
+   24
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/cart_items_controller.rb:
+    1  class CartItemsController < ApplicationController
+    2
+    3:   def destroy
+    4      @item = current_cart.cart_items.find_by(product_id: (params[:id]))
+    5      @item.destroy
+    .
+    8    end
+    9
+   10:   def update
+   11      @item = current_cart.cart_items.find_by(product_id: params[:id])
+   12
+   ..
+   24  private
+   25
+   26:   def item_params
+   27      params.require(:cart_item).permit(:quantity)
+   28    end
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/carts_controller.rb:
+    2  before_action :authenticate_user!
+    3
+    4:   def index
+    5      @products = current_cart.items
+    6    end
+    7
+    8:   def checkout
+    9      @order = current_user.orders.build
+   10      @info = @order.build_info
+   11    end
+   12
+   13:   def clean
+   14      current_cart.clean!
+   15      flash[:success] = "已為您清空購物車"
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/orders_controller.rb:
+    2    before_action :authenticate_user!
+    3
+    4:   def create
+    5      @order = current_user.orders.build(order_params)
+    6
+    .
+   14    end
+   15
+   16:   def show
+   17      @order = Order.find_by_token(params[:id])
+   18      @order_info = @order.info
+   ..
+   21    end
+   22
+   23:   def pay_with_credit_cart
+   24      @order = Order.find_by_token(params[:id])
+   25      @order.set_payment_method!("credit_card")
+   ..
+   31  private
+   32
+   33:   def order_params
+   34      params.require(:order).permit(info_attributes: [:billing_name, :billing_address,
+   35                                                      :shipping_name, :shipping_address])
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/products_controller.rb:
+    2  before_action :authenticate_user!, only: [:add_cart]
+    3
+    4:   def index
+    5      @products = Product.all
+    6    end
+    7
+    8:   def show
+    9      @product = Product.find(params[:id])
+   10    end
+   11
+   12:   def add_cart
+   13      @product = Product.find(params[:id])
+   14
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/admin/products_controller.rb:
+    4    layout 'admin'
+    5
+    6:   def index
+    7      @products = Product.all
+    8    end
+    9
+   10
+   11:   def new
+   12      @product = Product.new
+   13      @photo = @product.build_photo
+   14    end
+   15
+   16:   def create
+   17      @product = Product.create(product_params)
+   18
+   ..
+   25    end
+   26
+   27:   def edit
+   28      @product = Product.find(params[:id])
+   29
+   ..
+   35    end
+   36
+   37:   def update
+   38      @product = Product.find(params[:id])
+   39
+   ..
+   47  private
+   48
+   49:   def product_params
+   50      params.require(:product).permit(:title, :description, :quantity, :price,
+   51                                        photo_attributes: [:image, :id])
+
+/Users/BILL0617/projects/workspace/artstore/app/helpers/application_helper.rb:
+    1  module ApplicationHelper
+    2:   def notice_message
+    3      alert_types = { notice: :success, alert: :danger }
+    4
+    .
+   18    end
+   19
+   20:   def render_cart_items_count(cart)
+   21      cart.items.count
+   22    end
+   23
+   24:   def render_cart_total_price(cart)
+   25      cart.total_price
+   26    end
+
+/Users/BILL0617/projects/workspace/artstore/app/models/cart.rb:
+    5
+    6
+    7:   def add_product_to_cart(product)
+    8      items << product
+    9    end
+   10
+   11:   def total_price
+   12      cart_items.inject(0) {|sum, cart_item| sum + (cart_item.product.price * cart_item.quantity)}
+   13    end
+   14
+   15:   def clean!
+   16      cart_items.destroy_all
+   17    end
+
+/Users/BILL0617/projects/workspace/artstore/app/models/order.rb:
+    7    accepts_nested_attributes_for :info
+    8
+    9:   def build_item_cache_from_cart(cart)
+   10      cart.cart_items.each do |cart_item|
+   11        item = items.build
+   ..
+   17    end
+   18
+   19:   def calculate_total!(cart)
+   20      self.total = cart.total_price
+   21      self.save
+   ..
+   23    end
+   24
+   25:   def generate_token
+   26      self.token = SecureRandom.uuid
+   27    end
+   28
+   29  #變更付款方法欄位
+   30:   def set_payment_method!(method)
+   31      self.update_columns(payment_method: method)
+   32    end
+   33
+   34:   def pay!
+   35      self.update_columns(is_paid: true)
+   36    end
+
+/Users/BILL0617/projects/workspace/artstore/app/models/user.rb:
+    1  class User < ActiveRecord::Base
+    2:   # Include default devise modules. Others available are:
+    3    # :confirmable, :lockable, :timeoutable and :omniauthable
+    4    devise :database_authenticatable, :registerable,
+    .
+    7
+    8
+    9:   def admin?
+   10    is_admin
+   11    end
+
+/Users/BILL0617/projects/workspace/artstore/app/uploaders/image_uploader.rb:
+   12
+   13    # Override the directory where uploaded files will be stored.
+   14:   # This is a sensible default for uploaders that are meant to be mounted:
+   15:   def store_dir
+   16      "uploads/#{model.class.to_s.underscore}/#{mounted_as}/#{model.id}"
+   17    end
+   18
+   19:   # Provide a default URL as a default if there hasn't been a file uploaded:
+   20:   # def default_url
+   21    #   # For Rails 3.1+ asset pipeline compatibility:
+   22:   #   # ActionController::Base.helpers.asset_path("fallback/" + [version_name, "default.png"].compact.join('_'))
+   23    #
+   24:   #   "/images/fallback/" + [version_name, "default.png"].compact.join('_')
+   25    # end
+   26    process resize_to_fit: [800, 800]
+   ..
+   36    # process :scale => [200, 300]
+   37    #
+   38:   # def scale(width, height)
+   39    #   # do something
+   40    # end
+   ..
+   47    # Add a white list of extensions which are allowed to be uploaded.
+   48    # For images you might use something like this:
+   49:   # def extension_white_list
+   50    #   %w(jpg jpeg gif png)
+   51    # end
+   ..
+   53    # Override the filename of the uploaded files:
+   54    # Avoid using model.id or version_name here, see uploader/store.rb for details.
+   55:   # def filename
+   56    #   "something.jpg" if original_filename
+   57    # end
+
+/Users/BILL0617/projects/workspace/artstore/bin/spring:
+    4  # It gets overwritten when you run the `spring binstub` command.
+    5
+    6: unless defined?(Spring)
+    7    require "rubygems"
+    8    require "bundler"
+    9
+   10:   if match = Bundler.default_lockfile.read.match(/^GEM$.*?^    (?:  )*spring \((.*?)\)$.*?^$/m)
+   11      Gem.paths = { "GEM_PATH" => [Bundler.bundle_path.to_s, *Gem.path].uniq }
+   12      gem "spring", match[1]
+
+/Users/BILL0617/projects/workspace/artstore/config/application.rb:
+   13      # -- all .rb files in that directory are automatically loaded.
+   14
+   15:     # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
+   16:     # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.
+   17      # config.time_zone = 'Central Time (US & Canada)'
+   18
+   19:     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
+   20      # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
+   21:     # config.i18n.default_locale = :de
+   22
+   23      # Do not swallow errors in after_commit/after_rollback callbacks.
+
+/Users/BILL0617/projects/workspace/artstore/config/database.yml:
+    2  #   gem install sqlite3
+    3  #
+    4: #   Ensure the SQLite 3 gem is defined in your Gemfile
+    5  #   gem 'sqlite3'
+    6  #
+    7: default: &default
+    8    adapter: sqlite3
+    9    pool: 5
+   ..
+   11
+   12  development:
+   13:   <<: *default
+   14    database: db/development.sqlite3
+   15
+   16: # Warning: The database defined as "test" will be erased and
+   17  # re-generated from your development database when you run "rake".
+   18  # Do not set this db to the same as development or production.
+   19  test:
+   20:   <<: *default
+   21    database: db/test.sqlite3
+   22
+   23  production:
+   24:   <<: *default
+   25    database: db/production.sqlite3
+   26
+
+/Users/BILL0617/projects/workspace/artstore/config/database.yml.example:
+    2  #   gem install sqlite3
+    3  #
+    4: #   Ensure the SQLite 3 gem is defined in your Gemfile
+    5  #   gem 'sqlite3'
+    6  #
+    7: default: &default
+    8    adapter: sqlite3
+    9    pool: 5
+   ..
+   11
+   12  development:
+   13:   <<: *default
+   14    database: db/development.sqlite3
+   15
+   16: # Warning: The database defined as "test" will be erased and
+   17  # re-generated from your development database when you run "rake".
+   18  # Do not set this db to the same as development or production.
+   19  test:
+   20:   <<: *default
+   21    database: db/test.sqlite3
+   22
+   23  production:
+   24:   <<: *default
+   25    database: db/production.sqlite3
+   26
+
+/Users/BILL0617/projects/workspace/artstore/config/environments/production.rb:
+   21    # config.action_dispatch.rack_cache = true
+   22
+   23:   # Disable serving static files from the `/public` folder by default since
+   24    # Apache or NGINX already handles this.
+   25    config.serve_static_files = ENV['RAILS_SERVE_STATIC_FILES'].present?
+   ..
+   66
+   67    # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
+   68:   # the I18n.default_locale when a translation cannot be found).
+   69    config.i18n.fallbacks = true
+   70
+   ..
+   72    config.active_support.deprecation = :notify
+   73
+   74:   # Use default logging formatter so that PID and timestamp are not suppressed.
+   75    config.log_formatter = ::Logger::Formatter.new
+   76
+
+/Users/BILL0617/projects/workspace/artstore/config/initializers/devise.rb:
+    6    # confirmation, reset password and unlock tokens in the database.
+    7    # Devise will use the `secret_key_base` on Rails 4+ applications as its `secret_key`
+    8:   # by default. You can change it below and use your own secret key.
+    9    # config.secret_key = '51769001733057854059b09141a7497cd0f2d33396c9c8247d925c981f311204f3e2f51a0fd560297966d28c1fa57030673b6911c32d3264d02155ef79f56a28'
+   10
+   ..
+   12    # Configure the e-mail address which will be shown in Devise::Mailer,
+   13    # note that it will be overwritten if you use your own mailer class
+   14:   # with default "from" parameter.
+   15    config.mailer_sender = 'please-change-me-at-config-initializers-devise@example.com'
+   16
+   ..
+   19
+   20    # ==> ORM configuration
+   21:   # Load and configure the ORM. Supports :active_record (default) and
+   22:   # :mongoid (bson_ext recommended) by default. Other ORMs may be
+   23    # available as additional gems.
+   24    require 'devise/orm/active_record'
+   25
+   26    # ==> Configuration for any authentication mechanism
+   27:   # Configure which keys are used when authenticating a user. The default is
+   28    # just :email. You can configure it to use [:username, :subdomain], so for
+   29    # authenticating a user, both parameters are required. Remember that those
+   ..
+   43    # Configure which authentication keys should be case-insensitive.
+   44    # These keys will be downcased upon creating or modifying a user and when used
+   45:   # to authenticate or find a user. Default is :email.
+   46    config.case_insensitive_keys = [:email]
+   47
+   48    # Configure which authentication keys should have whitespace stripped.
+   49    # These keys will have whitespace before and after removed upon creating or
+   50:   # modifying a user and when used to authenticate or find a user. Default is :email.
+   51    config.strip_whitespace_keys = [:email]
+   52
+   53:   # Tell if authentication through request.params is enabled. True by default.
+   54    # It can be set to an array that will enable params authentication only for the
+   55    # given strategies, for example, `config.params_authenticatable = [:database]` will
+   ..
+   57    # config.params_authenticatable = true
+   58
+   59:   # Tell if authentication through HTTP Auth is enabled. False by default.
+   60    # It can be set to an array that will enable http authentication only for the
+   61    # given strategies, for example, `config.http_authenticatable = [:database]` will
+   ..
+   64    # config.http_authenticatable = false
+   65
+   66:   # If 401 status code should be returned for AJAX requests. True by default.
+   67    # config.http_authenticatable_on_xhr = true
+   68
+   69:   # The realm used in Http Basic Authentication. 'Application' by default.
+   70    # config.http_authentication_realm = 'Application'
+   71
+   ..
+   75    # config.paranoid = true
+   76
+   77:   # By default Devise will store the user in session. You can skip storage for
+   78    # particular strategies by setting this option.
+   79    # Notice that if you are skipping storage for all authentication paths, you
+   ..
+   82    config.skip_session_storage = [:http_auth]
+   83
+   84:   # By default, Devise cleans up the CSRF token on authentication to
+   85    # avoid CSRF token fixation attacks. This means that, when using AJAX
+   86    # requests for sign in and sign up, you need to get a new CSRF token
+   ..
+   89
+   90    # ==> Configuration for :database_authenticatable
+   91:   # For bcrypt, this is the cost for hashing the password and defaults to 10. If
+   92    # using other encryptors, it sets how many times you want the password re-encrypted.
+   93    #
+   94    # Limiting the stretches to just one in testing will increase the performance of
+   95    # your test suite dramatically. However, it is STRONGLY RECOMMENDED to not use
+   96:   # a value less than 10 in other environments. Note that, for bcrypt (the default
+   97    # encryptor), the cost increases exponentially with the number of stretches (e.g.
+   98    # a value of 20 is already extremely slow: approx. 60 seconds for 1 calculation).
+   ..
+  106    # confirming their account. For instance, if set to 2.days, the user will be
+  107    # able to access the website for two days without confirming their account,
+  108:   # access will be blocked just in the third day. Default is 0.days, meaning
+  109    # the user cannot access the website without confirming their account.
+  110    # config.allow_unconfirmed_access_for = 2.days
+  ...
+  114    # their account within 3 days after the mail was sent, but on the fourth day
+  115    # their account can't be confirmed with the token any more.
+  116:   # Default is nil, meaning there is no restriction on how long a user can take
+  117    # before confirming their account.
+  118    # config.confirm_within = 3.days
+  ...
+  124    config.reconfirmable = true
+  125
+  126:   # Defines which key will be used when confirming an account
+  127    # config.confirmation_keys = [:email]
+  128
+  ...
+  152    # ==> Configuration for :timeoutable
+  153    # The time you want to timeout the user session without activity. After this
+  154:   # time the user will be asked for credentials again. Default is 30 minutes.
+  155    # config.timeout_in = 30.minutes
+  156
+  157    # ==> Configuration for :lockable
+  158:   # Defines which strategy will be used to lock an account.
+  159    # :failed_attempts = Locks an account after a number of failed attempts to sign in.
+  160    # :none            = No lock strategy. You should handle locking by yourself.
+  161    # config.lock_strategy = :failed_attempts
+  162
+  163:   # Defines which key will be used when locking and unlocking an account
+  164    # config.unlock_keys = [:email]
+  165
+  166:   # Defines which strategy will be used to unlock an account.
+  167    # :email = Sends an unlock link to the user email
+  168    # :time  = Re-enables login after a certain amount of time (see :unlock_in below)
+  ...
+  183    # ==> Configuration for :recoverable
+  184    #
+  185:   # Defines which key will be used when recovering the password for an account
+  186    # config.reset_password_keys = [:email]
+  187
+  ...
+  192
+  193    # When set to false, does not sign a user in automatically after their password is
+  194:   # reset. Defaults to true, so a user is signed in automatically after a reset.
+  195    # config.sign_in_after_reset_password = true
+  196
+  197    # ==> Configuration for :encryptable
+  198:   # Allow you to use another encryption algorithm besides bcrypt (default). You can use
+  199    # :sha1, :sha512 or encryptors from others authentication tools as :clearance_sha1,
+  200:   # :authlogic_sha512 (then you should set stretches above to 20 for default behavior)
+  201    # and :restful_authentication_sha1 (then you should set stretches to 10, and copy
+  202    # REST_AUTH_SITE_KEY to pepper).
+  ...
+  207    # ==> Scopes configuration
+  208    # Turn scoped views on. Before rendering "sessions/new", it will first check for
+  209:   # "users/sessions/new". It's turned off by default because it's slower if you
+  210:   # are using only default views.
+  211    # config.scoped_views = false
+  212
+  213:   # Configure the default scope given to Warden. By default it's the first
+  214    # devise role declared in your routes (usually :user).
+  215:   # config.default_scope = :user
+  216
+  217    # Set this configuration to false if you want /users/sign_out to sign out
+  218:   # only the current scope. By default, Devise signs out all scopes.
+  219    # config.sign_out_all_scopes = true
+  220
+  ...
+  230    # config.navigational_formats = ['*/*', :html]
+  231
+  232:   # The default HTTP method used to sign out a resource. Default is :delete.
+  233    config.sign_out_via = :delete
+  234
+  ...
+  244    # config.warden do |manager|
+  245    #   manager.intercept_401 = false
+  246:   #   manager.default_strategies(scope: :user).unshift :some_external_strategy
+  247    # end
+  248
+
+/Users/BILL0617/projects/workspace/artstore/config/initializers/inflections.rb:
+    2
+    3  # Add new inflection rules using the following format. Inflections
+    4: # are locale specific, and you may define rules for as many different
+    5: # locales as you wish. All of these examples are active by default:
+    6  # ActiveSupport::Inflector.inflections(:en) do |inflect|
+    7  #   inflect.plural /^(ox)$/i, '\1en'
+    .
+   11  # end
+   12
+   13: # These inflection rules are supported but not enabled by default:
+   14  # ActiveSupport::Inflector.inflections(:en) do |inflect|
+   15  #   inflect.acronym 'RESTful'
+
+/Users/BILL0617/projects/workspace/artstore/config/initializers/simple_form.rb:
+    6    # stack. The options given below are used to wrap the
+    7    # whole input.
+    8:   config.wrappers :default, class: :input,
+    9      hint_class: :field_with_hint, error_class: :field_with_errors do |b|
+   10:     ## Extensions enabled by default
+   11      # Any of these extensions can be disabled for a
+   12      # given input by passing: `f.input EXTENSION_NAME => false`.
+   ..
+   26      # to the input. If so, they will retrieve the values from the model
+   27      # if any exists. If you want to enable any of those
+   28:     # extensions by default, you can change `b.optional` to `b.use`.
+   29
+   30      # Calculates maxlength from length validations for string inputs
+   ..
+   52    end
+   53
+   54:   # The default wrapper to be used by the FormBuilder.
+   55:   config.default_wrapper = :default
+   56
+   57:   # Define the way to render check boxes / radio buttons with labels.
+   58:   # Defaults to :nested for bootstrap config.
+   59    #   inline: input + label
+   60    #   nested: label > input
+   61    config.boolean_style = :nested
+   62
+   63:   # Default class for buttons
+   64    config.button_class = 'btn'
+   65
+   ..
+   69    # config.error_method = :first
+   70
+   71:   # Default tag used for error notification helper.
+   72    config.error_notification_tag = :div
+   73
+   ..
+   78    # config.error_notification_id = nil
+   79
+   80:   # Series of attempts to detect a default label method for collection.
+   81    # config.collection_label_methods = [ :to_label, :name, :title, :to_s ]
+   82
+   83:   # Series of attempts to detect a default value method for collection.
+   84    # config.collection_value_methods = [ :id, :to_s ]
+   85
+   86:   # You can wrap a collection of radio/check boxes in a pre-defined tag, defaulting to none.
+   87    # config.collection_wrapper_tag = nil
+   88
+   89:   # You can define the class to use on all collection wrappers. Defaulting to none.
+   90    # config.collection_wrapper_class = nil
+   91
+   92    # You can wrap each item in a collection of radio/check boxes with a tag,
+   93:   # defaulting to :span.
+   94    # config.item_wrapper_tag = :span
+   95
+   96:   # You can define a class to use in all item wrappers. Defaulting to none.
+   97    # config.item_wrapper_class = nil
+   98
+   ..
+  100    # config.label_text = lambda { |label, required, explicit_label| "#{required} #{label}" }
+  101
+  102:   # You can define the class to use on all labels. Default is nil.
+  103    # config.label_class = nil
+  104
+  105:   # You can define the default class to be used on forms. Can be overriden
+  106:   # with `html: { :class }`. Defaulting to none.
+  107:   # config.default_form_class = nil
+  108
+  109:   # You can define which elements should obtain additional classes
+  110    # config.generate_additional_classes_for = [:wrapper, :label, :input]
+  111
+  112:   # Whether attributes are required by default (or not). Default is true.
+  113:   # config.required_by_default = true
+  114
+  115    # Tell browsers whether to use the native HTML5 validations (novalidate form option).
+  116:   # These validations are enabled in SimpleForm's internal config but disabled by default
+  117    # in this configuration, which is recommended due to some quirks from different browsers.
+  118    # To stop SimpleForm from generating the novalidate option, enabling the HTML5 validations,
+  ...
+  133
+  134    # Namespaces where SimpleForm should look for custom input classes that
+  135:   # override default inputs.
+  136    # config.custom_inputs_namespaces << "CustomInputs"
+  137
+  138:   # Default priority for time_zone inputs.
+  139    # config.time_zone_priority = nil
+  140
+  141:   # Default priority for country inputs.
+  142    # config.country_priority = nil
+  143
+  ...
+  151    # config.cache_discovery = !Rails.env.development?
+  152
+  153:   # Default class for inputs
+  154    # config.input_class = nil
+  155
+  156:   # Define the default class of the input wrapper of the boolean input.
+  157    config.boolean_label_class = 'checkbox'
+  158
+  159:   # Defines if the default input wrapper class should be included in radio
+  160    # collection wrappers.
+  161:   # config.include_default_input_wrapper_class = true
+  162
+  163:   # Defines which i18n scope will be used in Simple Form.
+  164    # config.i18n_scope = 'simple_form'
+  165  end
+
+/Users/BILL0617/projects/workspace/artstore/config/initializers/simple_form_bootstrap.rb:
+    2  SimpleForm.setup do |config|
+    3    config.error_notification_class = 'alert alert-danger'
+    4:   config.button_class = 'btn btn-default'
+    5    config.boolean_label_class = nil
+    6
+    .
+  137    # to learn about the different styles for forms and inputs,
+  138    # buttons and other elements.
+  139:   config.default_wrapper = :vertical_form
+  140    config.wrapper_mappings = {
+  141      check_boxes: :vertical_radio_and_checkboxes,
+
+/Users/BILL0617/projects/workspace/artstore/config/initializers/wrap_parameters.rb:
+    2
+    3  # This file contains settings for ActionController::ParamsWrapper which
+    4: # is enabled by default.
+    5
+    6  # Enable parameter wrapping for JSON. You can disable this by setting :format to an empty array.
+
+/Users/BILL0617/projects/workspace/artstore/config/locales/simple_form.en.yml:
+   10        # html: '<abbr title="required">*</abbr>'
+   11      error_notification:
+   12:       default_message: "Please review the problems below:"
+   13      # Examples
+   14      # labels:
+   15:     #   defaults:
+   16      #     password: 'Password'
+   17      #   user:
+   ..
+   21      #       email: 'E-mail.'
+   22      # hints:
+   23:     #   defaults:
+   24      #     username: 'User name to sign in.'
+   25      #     password: 'No special characters, please.'
+   26      # include_blanks:
+   27:     #   defaults:
+   28      #     age: 'Rather not say'
+   29      # prompts:
+   30:     #   defaults:
+   31      #     age: 'Select your age'
+   32
+
+/Users/BILL0617/projects/workspace/artstore/db/development.sqlite3:
+  994  e6a2 b0e8 8595 e98c b62d e98a 802f 3430
+  995  6d6d e58e 9fe5 bba0 e585 ace5 8fb8 e8b2
+  996: a8ef bc8e e791 9ee5 a3ab e8a3 bdef bc8c
+  997  e5ae 8ce7 be8e e591 88e7 8fbe 0d0a e880
+  998  90e7 a3a8 e690 8de8 978d e5af b6e7 9fb3
+
+/Users/BILL0617/projects/workspace/artstore/db/schema.rb:
+    2  # This file is auto-generated from the current state of the database. Instead
+    3  # of editing this file, please use the migrations feature of Active Record to
+    4: # incrementally modify your database, and then regenerate this schema definition.
+    5  #
+    6: # Note that this schema.rb definition is the authoritative source for your
+    7  # database schema. If you need to create the application database on another
+    8  # system, you should be using db:schema:load, not running all the migrations
+    .
+   12  # It's strongly recommended that you check this file into your version control system.
+   13
+   14: ActiveRecord::Schema.define(version: 20151122005201) do
+   15
+   16    create_table "cart_items", force: :cascade do |t|
+   ..
+   19      t.datetime "created_at",             null: false
+   20      t.datetime "updated_at",             null: false
+   21:     t.integer  "quantity",   default: 1
+   22    end
+   23
+   ..
+   48    create_table "orders", force: :cascade do |t|
+   49      t.integer  "user_id"
+   50:     t.integer  "total",          default: 0
+   51      t.datetime "created_at",                              null: false
+   52      t.datetime "updated_at",                              null: false
+   53      t.string   "token"
+   54:     t.boolean  "is_paid",        default: false
+   55      t.string   "payment_method"
+   56:     t.string   "aasm_state",     default: "order_placed"
+   57    end
+   58
+   ..
+   77
+   78    create_table "users", force: :cascade do |t|
+   79:     t.string   "email",                  default: "",    null: false
+   80:     t.string   "encrypted_password",     default: "",    null: false
+   81      t.string   "reset_password_token"
+   82      t.datetime "reset_password_sent_at"
+   83      t.datetime "remember_created_at"
+   84:     t.integer  "sign_in_count",          default: 0,     null: false
+   85      t.datetime "current_sign_in_at"
+   86      t.datetime "last_sign_in_at"
+   ..
+   89      t.datetime "created_at",                             null: false
+   90      t.datetime "updated_at",                             null: false
+   91:     t.boolean  "is_admin",               default: false
+   92    end
+   93
+
+/Users/BILL0617/projects/workspace/artstore/db/seeds.rb:
+    1: # This file should contain all the record creation needed to seed the database with its default values.
+    2  # The data can then be loaded with the rake db:seed (or created alongside the db with db:setup).
+    3  #
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151120052123_create_products.rb:
+    1  class CreateProducts < ActiveRecord::Migration
+    2:   def change
+    3      create_table :products do |t|
+    4        t.string :title
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151120054745_devise_create_users.rb:
+    1  class DeviseCreateUsers < ActiveRecord::Migration
+    2:   def change
+    3      create_table(:users) do |t|
+    4        ## Database authenticatable
+    5:       t.string :email,              null: false, default: ""
+    6:       t.string :encrypted_password, null: false, default: ""
+    7
+    8        ## Recoverable
+    .
+   14
+   15        ## Trackable
+   16:       t.integer  :sign_in_count, default: 0, null: false
+   17        t.datetime :current_sign_in_at
+   18        t.datetime :last_sign_in_at
+   ..
+   27
+   28        ## Lockable
+   29:       # t.integer  :failed_attempts, default: 0, null: false # Only if lock strategy is :failed_attempts
+   30        # t.string   :unlock_token # Only if unlock strategy is :email or :both
+   31        # t.datetime :locked_at
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151120055456_add_is_admin_to_user.rb:
+    1  class AddIsAdminToUser < ActiveRecord::Migration
+    2:   def change
+    3:     add_column :users, :is_admin, :boolean, default: false
+    4    end
+    5  end
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151120062905_create_photos.rb:
+    1  class CreatePhotos < ActiveRecord::Migration
+    2:   def change
+    3      create_table :photos do |t|
+    4        t.integer :product_id
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151120100138_create_carts.rb:
+    1  class CreateCarts < ActiveRecord::Migration
+    2:   def change
+    3      create_table :carts do |t|
+    4
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151120100218_create_cart_items.rb:
+    1  class CreateCartItems < ActiveRecord::Migration
+    2:   def change
+    3      create_table :cart_items do |t|
+    4        t.integer :cart_id
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151121023711_add_quantity_to_cart_item.rb:
+    1  class AddQuantityToCartItem < ActiveRecord::Migration
+    2:   def change
+    3:     add_column :cart_items, :quantity, :integer, default: 1
+    4    end
+    5  end
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151121035606_create_orders.rb:
+    1  class CreateOrders < ActiveRecord::Migration
+    2:   def change
+    3      create_table :orders do |t|
+    4        t.integer :user_id
+    5:       t.integer :total, default: 0
+    6
+    7        t.timestamps null: false
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151121035751_create_order_infos.rb:
+    1  class CreateOrderInfos < ActiveRecord::Migration
+    2:   def change
+    3      create_table :order_infos do |t|
+    4        t.integer :order_id
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151121035828_create_order_items.rb:
+    1  class CreateOrderItems < ActiveRecord::Migration
+    2:   def change
+    3      create_table :order_items do |t|
+    4        t.integer :order_id
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151121154928_add_token_to_order.rb:
+    1  class AddTokenToOrder < ActiveRecord::Migration
+    2:   def change
+    3      add_column :orders, :token, :string
+    4      add_index :orders, :token
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151121155656_add_is_paid_to_order.rb:
+    1  class AddIsPaidToOrder < ActiveRecord::Migration
+    2:   def change
+    3:     add_column :orders, :is_paid, :boolean, default: false
+    4    end
+    5  end
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151122002353_add_payment_method_to_order.rb:
+    1  class AddPaymentMethodToOrder < ActiveRecord::Migration
+    2:   def change
+    3      add_column :orders, :payment_method, :string
+    4    end
+
+/Users/BILL0617/projects/workspace/artstore/db/migrate/20151122005201_add_aasm_state_to_order.rb:
+    1  class AddAasmStateToOrder < ActiveRecord::Migration
+    2:   def change
+    3:     add_column :orders, :aasm_state, :string, default: "order_placed"
+    4      add_index :orders, :aasm_state
+    5    end
+
+/Users/BILL0617/projects/workspace/artstore/test/fixtures/carts.yml:
+    1  # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+    2
+    3: # This model initially had no columns defined.  If you add columns to the
+    4  # model remove the '{}' from the fixture names and add the columns immediately
+    5  # below each fixture, per the syntax in the comments below
+
+/Users/BILL0617/projects/workspace/artstore/test/fixtures/users.yml:
+    1  # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+    2
+    3: # This model initially had no columns defined.  If you add columns to the
+    4  # model remove the '{}' from the fixture names and add the columns immediately
+    5  # below each fixture, per the syntax in the comments below
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/0iZo9JvHDg68hjji8setVDYLFyrnsJxZ9ZE4QIyXwO0.cache:
+   14  d6f1 ddf1 51f6 e8f1 83f1 4efa e0f1 837b
+   15  e9e8 e1f6 287d 782f bbff f8d1 38cb 8e8e
+   16: 1f6e 8def df7f 7c74 fcf8 f8fe 836c e7c1
+   17  d6f1 cefd a37f 1afe d3cb 77c3 ff71 52a4
+   18  e39f e7e9 e2f4 55fb 8fff f818 fe69 f79f
+   ..
+  569  15eb c718 760b dfd2 92a8 0626 6b76 0b0c
+  570  3899 6acb 323e f661 a7ca 7508 9747 0045
+  571: 5da4 72fe a9e1 9212 3e15 def7 1c75 44be
+  572  4b44 5014 6b46 3e74 c914 0a71 5c31 aad8
+  573  d678 d4e8 764e 14e5 17e7 d978 5c79 575b
+  ...
+  735  7c15 759a 4301 e4f8 ea27 4381 8fd1 3d10
+  736  f816 e2e9 c09b ce3a e7ae 425a d9d9 dade
+  737: defc e1e5 f37e 8854 d2c7 e75b 8f77 1e23
+  738  fc0a b5e5 538b e8f1 c59a 5e32 e170 f617
+  739  e0e2 a4b4 cd08 b500 1d41 58a3 78f5 f2eb
+  ...
+  824  4125 f262 3ece f3ab 2308 d8a1 a7e8 a355
+  825  05e4 fd96 8064 192f 5876 8016 c760 7f35
+  826: 367e 0908 7def 1515 d61f 5ff1 8db8 0886
+  827  10ea 7f7d f1a6 facd dd3c 4edf 8655 39df
+  828  7474 c90d a0f0 71f2 9192 9dcf a818 851b
+  ...
+  995  d449 26c6 98b4 e367 44d8 5d1d 58d7 1358
+  996  4478 6646 02fa dc0e 367c d366 d733 1979
+  997: 44c3 f30e 67cb ddef cbe1 d071 3acd 5a46
+  998  2867 3152 ffea 4951 cc09 20e7 8854 d64c
+  999  8057 53df df47 f0ff 08e9 8aab c7ef 73f2
+ ....
+ 1039  7952 ce05 843f 4811 d094 24c0 570d 6cff
+ 1040  6f52 b9dc c49a 899e a51a 715f 719f 536a
+ 1041: 00b3 3388 def3 3035 407e 2897 f81a 7db7
+ 1042  022a bf99 ee85 1697 4d33 4631 e0a6 27e7
+ 1043  2817 333f ce37 d1e7 7465 3758 9701 4b25
+ ....
+ 1320  57a8 e3c6 8b26 ca54 e432 7867 d3d8 e6d9
+ 1321  f5ce 0b16 2a36 c602 873e 778e d3d2 7c79
+ 1322: 9def f47a e03c 4d0a fa19 8b0b a94f e204
+ 1323  0be7 b0e4 dd53 5162 8d38 4dcc 5261 62c8
+ 1324  3d8c b1cd 9cbf 9b71 8a08 3404 0110 7d65
+ ....
+ 1390  cf03 64a3 ed1e c1c5 f05f 5572 0f3a 470d
+ 1391  41a3 dd96 c755 feb4 3de0 39ce 74f0 1abe
+ 1392: def1 c052 1ce4 2cf2 72a7 0d5f 117a db1f
+ 1393  103a e032 9e2b 82d6 e0d3 fc13 aaac 1ca8
+ 1394  c6a6 c30d 6a93 e3d7 bc60 b541 bbe5 b176
+ ....
+ 1398  feb9 c5fc ab69 8678 82e0 07a3 1b92 b004
+ 1399  62d7 9334 4130 acbd dbb7 6e3f 7db2 993e
+ 1400: 6def da69 3160 3611 8007 7e24 a4df bed5
+ 1401  4e70 06b8 8574 3ce6 64a7 9d84 503e 2eb0
+ 1402  e4c5 6986 27fe c559 3ec6 3c2d 8d39 eb7b
+ ....
+ 2261  b603 149b a5bd 83c5 a1d4 7c68 8d63 ca6b
+ 2262  b191 e9fc 609b 5f7a 6ecc 1d86 373b 87ae
+ 2263: c71c 4994 b407 f407 8846 1def 69f5 8e74
+ 2264  2177 a6c0 f6ee a06d 2255 fe5e 0873 76e1
+ 2265  60e4 fa4e b2be 9e05 3e24 cc98 5f43 3c8b
+ ....
+ 2579  913f 5e99 c195 028e 2db4 bb30 f20a 8bae
+ 2580  02a7 ad3d acb3 05e9 ef38 7e7c 71c1 7ead
+ 2581: 4def f6a2 f3ac 5517 4293 27c9 630f 3ffa
+ 2582  24b9 37d8 72f5 0587 9933 5aef fb4b 04a2
+ 2583  d2b1 e6d8 80cf edda d562 83b2 6192 d1fc
+ ....
+ 2624  bb71 6ed3 325b 78f9 9e40 c725 4707 0156
+ 2625  abcf 0622 2909 aa82 e073 f37b 0172 962b
+ 2626: 5413 f949 41a1 3ec2 1eab 6bc6 34a2 0def
+ 2627  4aac 123c a630 3526 55ca 3239 d51e 45a6
+ 2628  c155 ea34 fcc4 26c5 aee9 c39c 5aff dbf4
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/1ZHUjSMDZzFgX2L6HDV9ikMMsWvUhk4hFcdf45YlIZU.cache:
+   22  fd7f bdfb c6ef 300d daeb ff4e 513e 90df
+   23  8b9e acbf 23bc a06b 9396 8706 1f9a 5f51
+   24: befe e4ed df1e 38db defc edba 3c55 29b9
+   25  fc6f fd67 ffc5 f7de fd70 55e4 07bc f2ee
+   26  56af 400c 7924 3b91 475a 2a56 3f7c f786
+   ..
+   30  7a8b 025f d73b 9495 4ff7 abb5 7d7c 5ead
+   31  db87 be7b f307 e90e 5504 c0ea ed5f fcec
+   32: 8fd7 d1db f76f defd f0cd ea87 ab9f edf2
+   33  7a45 fe87 567b 74c8 b7b8 6e56 b4c3 56cd
+   34  0e35 3f28 8a55 8257 69b9 3f92 4bd9 2a3f
+   ..
+   58  ab9f 1c52 fafe d59f e429 3ed4 8434 325c
+   59  c8e7 fff4 273f eb5e 5ad3 b712 593b 25f4
+   60: 7def 9aa7 a47e 77fe c4bb a428 9377 7b44
+   61  84b6 7af7 273f f9a3 7ff0 673f fd07 5f0d
+   62  4057 87b2 daa3 820c 492a ff14 a9b5 7157
+   ..
+  145  d597 6f57 a869 aa2f 69a3 af56 6fbf 7a2b
+  146  630e af8f 795c d399 c2dd b652 0377 a198
+  147: fdef fff8 ed17 6f7b e477 ecd5 6fd0 23aa
+  148  d32a 3f36 f76f 7594 29e8 b8be 9c1f 3b0d
+  149  d02e 51ff fa54 f62b a84a 6724 8ee3 6eec
+  ...
+  518  bd49 9544 146e 7cce f73f bb16 b2e7 3f9e
+  519  0661 8111 7abc 2f10 f198 d25d 5e64 77ec
+  520: 8d53 a1bb 53b2 77b4 def7 350f 13d1 11b7
+  521  254d e894 93b9 d427 2031 5798 5c24 79b7
+  522  209b 9dd4 6de5 9ab1 5d7b 1c67 d72c e36f
+  ...
+  880  4267 2be4 46ad b147 ad30 46d0 aebf 3f86
+  881  8b96 77aa eb2f 4de8 bb03 997d 7ec9 c973
+  882: 0378 dc9b ba5a d32a 2033 f0f3 699c def5
+  883  6b7b 8c76 5153 728b dd30 e11b 3698 8de2
+  884  14ba f42f 5b8f e24b a6dc 6818 4462 397e
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/2amw14maxUDBrvyi2PFbK58D6lslaxPl_HIItQgOXQ0.cache:
+  427  d18b 524b df79 30b1 5c20 d6ab fbfd 3c00
+  428  1bfa a9d9 dfe4 c5e3 fd62 47b4 343e 343e
+  429: 253d 1c61 5112 e7ec 4beb 6ed1 fdef 2b81
+  430  7557 3efb ddc4 99d6 7823 9a9b 8592 9ae8
+  431  f5bb 85e2 d6e0 1d0c 4ca4 5548 b284 6161
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/2yCQj1iQ2OKl2EsayYPpTjIcRZ1uDP572qESZGWMZiE.cache:
+   23  7e2f 7ab2 fe0b c20b ba36 6979 68f0 a1f9
+   24  86f2 f567 6fff dac0 d9f6 e66f d7e5 a94a
+   25: c9e5 bff2 2ffe e50f defd 7855 e407 bcf2
+   26  ee56 af40 0c79 243b 9147 5a2a 563f 7ef7
+   27  863c 76d8 d4a8 c0df 94a7 66f5 9b37 abd5
+   ..
+  833  13be d6f5 1ed3 785e 774b 6f7f 69c7 332f
+  834  1245 405a 2e75 9d10 2ece 43e9 d02f ed7e
+  835: 3e4d 7126 def5 6089 57a8 83f9 2376 a422
+  836  82a5 4237 2855 b46a 4685 5248 cf04 5e3f
+  837  6e61 9051 d6cd 14fb 89f3 1b1d 55a6 e325
+  ...
+  879  a2b5 7b6e 9a75 f628 715a 5134 16b4 5f84
+  880  ce56 c88d 5a63 8f5a 618c a05d 7f7f 0c17
+  881: 2def 54d7 9f9b d077 0732 fbfc 9293 e706
+  882  f0b8 3775 b5a6 5540 66e0 e7d3 38bd ebd7
+  883  f618 eda2 a6e4 16bb 61c2 376c 301b c529
+  ...
+ 1015  11f1 b1e6 08fe 58ab 3bba ab85 f38a f4fa
+ 1016  4006 d054 919f 2b04 cd81 0d21 c1fe 6425
+ 1017: 2097 4e0e 60b1 06d7 d718 6ce1 defa 94ec
+ 1018  f3e6 edaf 46c8 77dc fd0a 9337 eb6f 77af
+ 1019  66ef b307 98ca 3d
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/3907g7cT7VNYA_8DXRKhHWxWfHnNHt3TQVwuyaicz1c.cache:
+    6  8801 0324 2498 2031 6006 1253 0423 1821
+    7  d112 6242 44fe 4644 4644 e6de e79c 8cd8
+    8: afdf bdef d53d 2733 32f3 5b2b 56ac b562
+    9  c58a 15ff fc2f 7df7 2b77 bf74 2ae2 2f6e
+   10  7ee1 bfdd c509 b87b fdfa f51f 97a0 285f
+   ..
+   52  da8f a0fc 4008 b7da 1769 88de affd 411c
+   53  82b4 84a4 9dd2 087e fe0f bff8 51f3 d212
+   54: bd15 cada 698b def7 ba7a d896 affb 4fbc
+   55  de26 d9f6 f531 8042 5bbc fe83 2f7e e777
+   56  ffe8 87bf fb69 0754 4bb3 e218 24f1 b700
+   ..
+   58  4e41 9825 41f9 9a7c ae7e 9986 14a2 e6df
+   59  6ab4 9659 17f7 4748 f5b1 7c5d 9cb6 ef57
+   60: e6da 583b cdef 3dc8 5509 e578 55f3 696d
+   61  b0d4 ce40 ced7 c3a7 cbf6 db87 ea98 68df
+   62  bdd2 b41d d420 ab5d 708c 93f7 775a 19a4
+   ..
+  140  5290 4d6b 79c8 5f1e 0ab0 fb8a e8cb d6e2
+  141  df69 37da 2737 5a50 55c5 27a8 d1a7 dacd
+  142: a737 63cc def2 9887 359d 29dc 752b 3670
+  143  4b16 b3ff e4f3 9b8f 6e5a e4b7 f8d5 6f82
+  144  fba0 0c8b 38af ee6e 7894 31e8 585e cef3
+  ...
+  231  ed50 a6cd b755 00dd 6c13 e162 a62c 9c2f
+  232  dbc2 d525 c356 09d8 09f8 4cd9 39df 5502
+  233: 7308 5079 123e 6aca def9 9e12 a80b b148
+  234  5326 cfdf 2801 1a55 068e 77fc dc08 8732
+  235  7dbe af40 8c82 8f96 327c 86ae 4b8f 0b46
+  ...
+  718  1047 41ba 1f58 cf18 c36d 03e6 006d ee09
+  719  46f0 d040 3480 c718 a88e 1734 2030 4c34
+  720: 100d def1 27a8 b12b 68c0 c3c0 6ac0 9717
+  721  3302 11b8 9681 db10 3473 dc12 8d05 830b
+  722  6f37 7fd4 9202 3ae7 bdfc f9ec 360c a931
+  723  6b78 b262 d505 28f3 2c2d 511c 04c1 45e0
+  724  7749 f6b0 7a1c 3658 a132 49dd b2b7 bed6
+  725: 8def bf19 6a28 9561 0140 aa05 69a4 7d82
+  726  a51c 78ae 4757 5392 40a2 a6b1 891c 254b
+  727  8c72 230c a759 f2c7 18f2 fe4e 3bc4 5104
+  ...
+  747  c9b7 38ad 29ed d937 9d78 ed60 3c7b 6819
+  748  b4cd 9288 20cd f616 262d 4ef3 53f5 25ca
+  749: def9 fca6 0441 111e da14 0b88 71fb 2eae
+  750  20fc 47d4 c5b5 2cf4 bd54 53b2 3a66 df0a
+  751  6ef3 ee60 d43a a644 6a8b 208a 3394 6882
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/3BnTyGw_44Ln3BY_GiPlQHNS4gMmPTJ58bACwQRtLeg.cache:
+   22  c5cf 38bd afda ff6b f304 53d1 ff5f 552c
+   23  cb11 14fa ef3e fd8f ffb4 796f bd95 dc4b
+   24: deff db32 2b2f 927f 8192 6fa8 64f2 4d7e
+   25  5ca6 f0e8 e3f6 607b 7bb0 8385 ce16 8b39
+   26  90c4 fb5f b0ec 6054 4c37 e129 be78 351b
+   ..
+   81  7b74 6e64 9f16 9ed1 be05 7290 2f98 0927
+   82  c467 80c9 4c80 c7bd 5f56 0ba2 987c 962f
+   83: f063 58e2 25d6 94dc cd66 67e9 6c94 8def
+   84  723d df22 2ba2 52b9 7605 6b22 721a 271d
+   85  aa08 7e03 a567 b873 9182 8e99 7c60 8ae0
+   ..
+  757  8970 4561 a1dc 806a 8397 c37f ab6f cd32
+  758  6c77 2a28 b86d d167 ec91 7c46 be08 ea8b
+  759: a2e4 52ef e2bd def0 9390 5ebc bf7a 837b
+  760  c3b6 2428 b6a1 784e 8e8d 2f23 b14c dbf1
+  761  58d7 2a7c e913 0a14 d487 cc7d 5e47 b505
+  ...
+  928  d756 9d8e 3f52 3649 b19a a208 948c 2605
+  929  c918 7cb0 027f e579 3375 6b8d 0367 d168
+  930: 7729 0c5d 1ebb 74b1 f205 1a3f a297 defc
+  931  48f9 1bb8 1ce3 9364 a7ec c148 959b c5d9
+  932  f28b b365 5994 36b2 172f a46b 7245 5947
+  ...
+ 1073  94a3 503e 27bc c6cf f9be 0120 9273 20bb
+ 1074  77d0 efaf 0905 92d3 5984 0f3b 1c0e b1be
+ 1075: def1 f99f 94bc ceca ec04 fff8 0f7e 951e
+ 1076  931e c598 6d0d 149c c5c4 5f6b 2bac cf2d
+ 1077  c631 7038 4674 6777 600c 3c1d 0e13 e8b3
+ ....
+ 1091  f061 f268 6f85 83f8 30f9 126a 5c8c 068a
+ 1092  0ee6 f8f3 93e4 a1a4 2f57 445b 13aa d5d9
+ 1093: e96a 9e16 0682 a6eb ddef ec5f df00 d18c
+ 1094  9d8a edc4 c6ba 5783 7a89 7802 53cb 4dac
+ 1095  653d d063 0925 1c59 ff7e 4731 c27f 376d
+ ....
+ 1390  c6f3 00d9 68bb 4770 31fc 5795 dc87 ce51
+ 1391  43d0 68b7 e571 953f 6e0f 788e 331d bc86
+ 1392: af77 3cb0 1407 398b bcdc 69c3 5784 def6
+ 1393  0784 0eb8 8ae7 8aa0 35f8 34ff 882a 2b07
+ 1394  aab1 e970 83da e4f8 352f 586d d06e 79ac
+ ....
+ 1430  c240 fa3f 6e6d 3f4a 3885 af4b 96e5 da11
+ 1431  d38a 7ced 9ced d629 6d22 7b7e 910e e64a
+ 1432: 95c0 fecb 28c5 fde7 7434 da9c 1def 7068
+ 1433  2760 7527 4415 e50b 3724 7ee7 d47d bae2
+ 1434  2226 d7e7 37ea b786 5f99 45f3 83a0 e573
+ ....
+ 1504  73d7 8277 aeeb a674 806b 3318 0cc8 17c0
+ 1505  45ad 1312 5465 80cb 9d97 6104 c143 0d49
+ 1506: ce78 e1a7 4d6d 5def a318 b0cb fa9e 825d
+ 1507  d96d d51b 972b 9953 a79f 660b d1a5 a391
+ 1508  5f97 74e7 28a0 0c86 e132 e61f 3c10 a99f
+ ....
+ 1911  e09c d498 e15d c272 31f5 9ecc dfe5 a5ce
+ 1912  a455 e4d5 9367 b547 134c 9037 9664 5efc
+ 1913: 8d11 8eca e312 335f 29ca f76f 0cf1 7def
+ 1914  ddd5 e5bb 43fd 7d44 f8de 6b25 85ea be40
+ 1915  8071 28de 397c d6ff df8f ba9b a716 ac05
+ ....
+ 2446  38d6 2ad5 f037 1f6b b1eb 56b3 cd8e 1162
+ 2447  fc45 54b4 5e7b ee5a 0b9b 473f b06c 14b5
+ 2448: 2818 39d4 3f2b 80b4 defc e58f c913 108c
+ 2449  9f92 9d24 2588 f632 430f fb3b dbbb db04
+ 2450  faec 13ec a0b7 2d02 5ff7 29a6 8485 3894
+ ....
+ 2620  3f35 425a dc4d 6a4b c23f 5433 c22a 4913
+ 2621  2626 edc1 69dd d1df e4f4 e354 d4f5 2447
+ 2622: aae9 d0f2 dd38 24c6 c58f c75e 887b 2def
+ 2623  bc58 0784 129f 4316 568c d3f5 5ebd 6a58
+ 2624  dcbd 38b7 6999 2dbc 7c4f a0e3 92a3 8300
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/3k44xym2guYCEHit-Y5IVNF_zyIGQg0G7SjDITokm-k.cache:
+  159  3011 9078 cb60 8ea0 30d3 59c0 f0cb 4ef2
+  160  80cf c2b1 d96c 4cc2 117b 4014 2c5b 7e63
+  161: 9a80 7ba7 ba9a eac5 274d 5389 a6ef defd
+  162  a45b 404a b0bc 9cf4 c37f 923f 1f77 19f1
+  163  61aa c53f 45f9 86d0 bead 7e48 9f24 531e
+  ...
+  690  8e4c a296 f5f3 117f 59a4 e957 5af5 18d3
+  691  bf3c 250e 948a dc15 c4dd e1e9 682f e9c0
+  692: fbf4 2f0f def5 6166 8204 d3cf 939c 3cf8
+  693  3b3f 7e4f 27b1 ef7f d16a c8a2 caa8 4b73
+  694  bfa8 6a44 3c39 eab9 757b 770e c501 d35f
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/4CrysohIWSa0-RrrE6UtBgCjG0wN1w55uaGGXPWM7pY.cache:
+   24  ac7f 837e 01e1 dea6 7fc1 6fc4 455e a3bc
+   25  fe05 61f5 4fde ffdd 9ed9 cdcd bf5d 15e7
+   26: 32c6 97ff 957f f15f 7def c7f1 212a 31b2
+   27  d5fb 3ffb e91f ac83 f71f df7d f8ed 77ab
+   28  df5e fdf4 9056 2bfc bf68 758c f274 87aa
+   ..
+   89  968e 0b80 1543 fac4 8df0 fbd5 17bb 9d41
+   90  f076 43fd 0bc3 e0a0 82d8 aeea 4866 341c
+   91: 6703 dec9 f12c 0868 6732 64ce 271e 9def
+   92  364e 5a63 4729 cbb3 5a9d 8a2a 25de c2fd
+   93  3095 996d 614d df00 a1b0 25ae 2e4e f7ab
+   ..
+  258  87e2 1466 de2a da16 f8ec 2a9f 021d f226
+  259  d186 3689 5159 168f 7aff 23e4 6da2 ed2c
+  260: 02b4 defb 0879 a368 bb8b 40ad c9df 0a79
+  261  8b68 7b8b 80ac cd93 0b79 a308 5ecb a409
+  262  326a 936a 43de 2082 d733 2951 736e e8ee
+  ...
+  328  ebcd 5475 54ab 83a0 7c59 0e0b bcd6 4c95
+  329  e8eb b89a 7c55 0e0b bcd2 cc61 1232 6ff7
+  330: c0cb cc54 e76d 9d62 3ba2 910c def0 8117
+  331  9aa9 8a73 9e90 aa60 a58e d5bc f5b3 8245
+  332  c04e 8a6c abb6 d97c 4d0e 0bbe d24c 83da
+  ...
+  823  67e4 41d1 4b89 513f 3445 8c2a 10a4 2286
+  824  9134 2a77 bcbf 3426 08d3 693c 26d0 c2f6
+  825: 6c1e 4f72 e522 def5 7ce2 6360 7445 be61
+  826  3e44 2780 58d2 0410 5792 9961 739e 801f
+  827  c2b0 b8cd e5d2 32ba 6b32 c56e e64d 9733
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/5qvO66Y4Zi77wdytC4RPavvkXy15Xc3WI4jlpiqro-k.cache:
+    5  0b48 15ea 032f bcf1 0c12 af7d 8447 de50
+    6  1f2a 106f 207e 33b3 1fb3 7bbb b669 d25a
+    7: 4aec 9df9 edef fb73 663f 7ff1 f895 eec5
+    8  38a2 bdd9 cffe 7548 3dd2 6db7 dbf7 1989
+    9  58fb 566f 6bab 736d fe7a db8e 0e26 ed11
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/6N_wJRmTFPSp-UuwFMOh8nK_zG1wRznNDRE1xz107yU.cache:
+    5  c191 33c7 72e4 475c 90b8 2171 0009 0955
+    6  9c90 b820 2424 9ebd 9b8d 57c9 a6d9 c4de
+    7: 2807 7b3c f37d dffb f6bd e7b1 7def d0f6
+    8  696d 28e0 b492 1df8 cea2 0ed1 5455 bd2e
+    9  0817 eab3 95ab 57f3 3385 b2ea 73b6 4e0c
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/8OQLOc7oMkqmXs9npgOHuYYjOcbbcJo11kPYdoUjmVU.cache:
+  151  4904 ab0f 6d7e 8c4e 6dbb d7d7 2727 c2d2
+  152  83d5 fcd7 ee10 17e5 e980 add8 fdca 6ec5
+  153: 17a3 2f1e fb5f 19c0 def5 e595 c34a c940
+  154  a334 5422 e05b 5747 bac9 a387 6d54 f263
+  155  ab4f 0b61 e15d bfe7 37db 3a5f 7dbd dac4
+  ...
+  257  b18c 8138 9177 18f0 86d1 36e1 87e2 1466
+  258  de2a da16 f8ec 2a9f 021d f226 d186 3689
+  259: 5159 168f 7aff 23e4 6da2 ed2c 02b4 defb
+  260  0879 a368 bb8b 40ad c9df 0a79 8b68 7b8b
+  261  80ac cd93 0b79 a308 5ecb a409 326a 936a
+  ...
+  328  54ab 83a0 7c59 0e0b bcd6 4c95 e8eb b89a
+  329  7c55 0e0b bcd2 cc61 1232 6ff7 c0cb cc54
+  330: e76d 9d62 3ba2 910c def0 8117 9aa9 8a73
+  331  9e90 aa60 a58e d5bc f5b3 8245 c04e 8a6c
+  332  abb6 d97c 4d0e 0bbe d24c 83da 5d9b 6acc
+  ...
+  823  4b89 513f 3445 8c2a 10a4 2286 9134 2a77
+  824  bcbf 3426 08d3 693c 26d0 c2f6 6c1e 4f72
+  825: e522 def5 7ce2 6360 7445 be61 3e44 2780
+  826  58d2 0410 5792 9961 739e 801f c2b0 b8cd
+  827  e5d2 32ba 6b32 c56e e64d 9733 bd7b 5cc5
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/9DhjT5tndjw7KrVX9iwb18Z4CvpqrYaQX6-GYkkScWw.cache:
+   33  e0fa 44cc 13e4 f942 136f b4a3 318b 530d
+   34  f97c edfa b7ef 812a 27b2 c7dd 1a62 e477
+   35: def3 2aab 90f2 4c90 e9d0 19a3 30f0 8223
+   36  1e45 6b1f f3d4 cdc1 01a2 83d7 73dc 2722
+   37  2cc2 0656 78e4 c848 8494 f281 1c64 a84b
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/A2b2H48H38NPzD7xZlmQHHsRQUgwOzajEUX2VAYQC1s.cache:
+   16  763e 7fae 6e18 f9fc 9d96 e5dc 6e95 8cde
+   17  7c56 2bce 9ae5 52dd a89e df60 e537 062b
+   18: dd64 552a a805 5c2f 9def d5e6 f472 c338
+   19  9f38 3d72 6a6c 4f5a d9a3 dcae cfd9 f833
+   20  d7f6 3f65 cf18 1ed8 b97c 5a73 e66b 46be
+   ..
+  174  bcaf 50df 68c0 9868 c12d 5cdf 981c c80a
+  175  f19a 4003 3e88 7099 1c57 0f79 7b6b c738
+  176: cc8e 017d 760c 386b 941d 359f 1def 8a4b
+  177  30e1 d9f1 11c4 8c77 d48d 3934 f9ca e9e3
+  178  4794 e9ba 55c1 1c52 2beb 453c a366 65c6
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/Ac-L7eD1_pB7Jq1jLEcN7y1R4y_ndYnmwAo2E8Zqzgk.cache:
+   38  f5e7 f487 f6bb 4f79 b3cb 0fe4 6982 29cb
+   39  2bc2 bbb2 7abe 232f 4814 bcba 5b3d e243
+   40: 5656 aa5b f413 6545 defe bc3a 16a7 87fc
+   41  f0a3 5adf 7afc d42a 4507 4a74 85b7 b8c2
+   42  8794 a0de 911f 56a7 3a3f 3c10 2e55 b820
+   ..
+  254  0819 85a2 fd73 9c85 c036 cf56 23d1 fe39
+  255  ee02 768d b639 b17a cca2 0174 bc25 6cbc
+  256: 9c00 2d9a 41c7 5f44 defc 046a d118 3af0
+  257  3b13 2610 8bf6 d081 b687 bf39 e1ba 3d58
+  258  cf8c 5bb4 8a4e 041e edda 9613 9845 93e8
+  ...
+  550  afd3 aa2c 0a1a 2eeb 6ddf c7b3 00b9 5e2f
+  551  6943 fc65 4d84 b46b 2f64 d77e feaa 7355
+  552: 9e8d b8a9 0381 c897 b9a2 0d95 6aaf 7def
+  553  380f 1779 1fdc 56c7 e16d 716d 0130 2a7a
+  554  a674 0c87 8e97 6e2d 0eaa 44fe 9200 e8b5
+  ...
+  838  ca74 bc44 7c97 e335 cc70 3327 1dc3 8bdc
+  839  4751 6f0d 21ea 3333 2923 5776 2073 535d
+  840: 75dd 15f7 8d9c 5542 b044 e741 cdef 69e7
+  841  816d f652 de6b 9c87 a107 142b 07cb 731e
+  842  d4fc 9be3 3cf0 0d5f cac3 59ce 035d 64d2
+  ...
+  936  5761 65ee 2af0 8c77 37c6 bbf7 6640 67bc
+  937  1a17 6e78 62b2 c140 c154 b31e ec44 b3cd
+  938: bc66 f733 d1b3 defd 4bbd 97cf 7fb8 cd1c
+  939  a127 64a1 ec81 3759 f219 769c 72bb 6a99
+  940  1835 f863 4534 49f5 3c1b 7588 9250 d123
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/cAN5NmOAKPY19jCvK6beAVXbifpWyx1jKEmG7B4fCaU.cache:
+   66  2289 5270 fb2a 2ca1 4eb8 7d15 832a 4c52
+   67  a8ac b6c9 2e0a 8f48 5bd4 3f9f 0a78 730b
+   68: df04 45f9 d51e 8471 fdef aec8 4fc7 db57
+   69  8730 81ad 0e20 3bdd beca c2fb db57 251c
+   70  8ff5 93e5 e900 896d a88e 93f2 9886 b04f
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/cfOW2qHCafTEaDLt3DTj1WpdrSWzSpDuNjLjQlUjSII.cache:
+  170  9cc5 b615 a5d8 0e1d 2fb3 2317 b931 caac
+  171  d0c1 a18b edc4 cda2 34d9 065e 9039 99e5
+  172: 59e1 0697 cddb 2fc1 21fc def7 73bc cd3f
+  173  befd 7245 174c 50f3 c55b bc4f 7096 e16c
+  174  5d1e 89bf f77c c46f bfbc 7b11 bc2d b623
+  ...
+  519  28dc f89c ef7f 762d 64cf 7f3c 0dc2 0223
+  520  f478 5f20 e231 a5bb bcc8 eed8 1ba7 4277
+  521: a764 ef68 bdef 6b1e 26a2 236e 4b9a d029
+  522  2773 a94f 4062 ae30 b948 f26e 4136 3ba9
+  523  dbca 3563 bbf6 38ce ae59 c6df cc84 73e1
+  ...
+  814  6678 db31 7c2d 70bc 1531 af5f 5b64 39e9
+  815  3930 9cfc f14a 1e3a e41a 378c 58ec 6b69
+  816: ac7b 3063 bdef 1f45 8fcd 18f9 e212 fffc
+  817  5122 d6d2 dae7 5956 e097 8e1f 1f94 77e7
+  818  ced7 f392 1105 96bd ac44 5892 d00f ba72
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/d__wDvsu8wvZURj4cB3TKm-N8LDgjyI5zrJSEA0FgGY.cache:
+  108  0bbf 5d14 cfca 3285 7eb9 c90a e687 180e
+  109  71c6 0ef3 5c4b 6f7f cc78 877c 07ad 4197
+  110: e8bc ca67 f468 4a84 3176 8f41 dc4d defc
+  111  107c 7576 5a4c 9a0b a678 968d 40aa 9b01
+  112  9386 ceb5 d640 5031 3d4c 66cb 69b8 8cf8
+  ...
+  273  152c fc01 7b43 7b3d 9e03 76af 19d7 053d
+  274  95c9 d4e5 8c9e d05a 5bce 5029 bd41 fa05
+  275: c379 b04e 563a 984e 803c bf9c 2cae def8
+  276  5390 e463 3331 aadf 7aee 6bbf edd9 1aa8
+  277  cfe1 6010 ad96 ece0 3256 5c5a aae2 5d2f
+  ...
+  759  7083 8970 4561 a1dc 806a 8397 c37f ab6f
+  760  cd32 6c77 2a28 b86d d167 ec91 7c46 be08
+  761: ea8b a2e4 52ef e29d def0 b390 5ebc bf7a
+  762  833b c3b6 2428 b6a1 784e 8e8d 2f23 b14c
+  763  dbf1 58d7 2a7c e913 0a14 d487 cc7d 5e47
+  ...
+  948  4a0c bf3a b695 d511 fe4a 83b7 8b50 f56b
+  949  b1a3 b534 6b35 6a73 a8bd e089 5adf 6b5b
+  950: 8c65 810a d622 f1b7 deff c885 0852 5b1b
+  951  7bee 9068 6e06 84e5 7ddf b13d 9900 71c7
+  952  aaf5 c897 5dbf baec 4f54 960b 386d 9967
+  ...
+ 1028  758d 151f 7fd6 3b8d 4463 8e05 689d bf8a
+ 1029  d1d5 2dc0 ba53 162b 3368 4ca2 051f 8cf1
+ 1030: 1cf0 def5 a63b 6393 3e4b a1d2 b14f 09c3
+ 1031  a56b a7fd b3a6 cf34 3fa2 0b9c 5b75 abb5
+ 1032  6bcf 17d6 2d1a 61e5 7950 ddc0 723c b35a
+ ....
+ 1093  3ae2 1f3e 4c1e edae 7010 1f26 0fa1 c6c5
+ 1094  68a0 e860 8e3f 3f49 1e48 fa72 45b4 35a1
+ 1095: 5a9d 9dae e669 6120 68ba defd cefe f50d
+ 1096  10cd d8a9 d84e 6cac 7b35 a897 8827 30b5
+ 1097  5cc7 5ad6 033d 9650 c2a1 f5ef 7714 23fc
+ ....
+ 1479  c76c 200f aeb0 fe99 7347 10d6 38c3 06f3
+ 1480  c43f 3dfb eec5 b72f 8748 d5ed 6e0f fec1
+ 1481: bb0a fd70 999b e92f defb ad55 fa5d b3db
+ 1482  2dc7 e51b 5d34 edcd a758 8310 a7fe 4c62
+ 1483  3719 9da6 e5b3 4567 4bee c24f 02ab a3be
+ ....
+ 1780  786d 44eb a885 3a3d d408 bcdb 6442 3304
+ 1781  db14 5180 beef d69a 7096 e60b 4e6e 8987
+ 1782: 1129 10dd 600c cf73 def9 9e41 c924 36ef
+ 1783  84eb e627 0eff 73b5 5851 dca0 aabc b3e7
+ 1784  2e19 d0a1 c32f debc 96b8 4cbe 83c1 af6f
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/DFQDEkf-SnxYUFx73yb2P_ZRBnJqrBRj8Gdde1hadDo.cache:
+   51  2a71 1d40 915f 5679 9975 da4c 13ed 6e87
+   52  cb77 f7f9 8bd7 194c 563e 7a0f f373 6bf7
+   53: defd 7b8f a8a9 196c 6498 8649 0185 e2a5
+   54  14da 18e8 1c24 8750 6843 46e6 2967 59ae
+   55  3258 ea21 bd74 7475 2eab bfc1 b4b4 79ee
+   ..
+  235  e8f5 6321 b680 e4d0 cc0d 9438 f1c0 b0b7
+  236  0773 b26c 8154 12b3 1cbe 92f1 77e1 5e8b
+  237: 5fb9 7394 ed9f defc 73e4 0c47 8eaa bb7c
+  238  a574 d591 51d4 5768 f56f 2838 92e9 176e
+  239  94ec 9940 9a55 314d 8aa2 8f8a fe58 94ef
+  ...
+ 1518  710a 2c6d 9ebe f1ec 53e7 7ddf bc6d f6c7
+ 1519  daa8 9fce e6cc f034 c737 e42f 286f 6b37
+ 1520: 767f 709e 179e 390d defd 4223 abe5 8432
+ 1521  45fd f436 5ca1 f6d7 f541 0f1c 79dd 393f
+ 1522  cb91 d754 8cb8 98c1 71f8 219d 9296 aec0
+ ....
+ 1709  4a50 2d47 ea89 9152 c11e 093e 4852 084f
+ 1710  d973 bfe4 80e4 444b 6e83 6e1c 25ed 32ab
+ 1711: 8ae9 0702 82c0 cca6 6de7 ddef 24f5 4e9b
+ 1712  ee97 bc33 314a 46bf 19b7 1371 f5a7 7a50
+ 1713  9cc7 6a30 b1d7 0dab c14f c26a 801d e693
+ ....
+ 1732  3ce2 8ed1 63d1 edc8 4fd8 319f 43f5 79f5
+ 1733  22ac 0f3e 70bf 98c0 5d7e 1e7c e5db 0a36
+ 1734: 92e4 ce4b 5def 907a a8cb 4a1c 2633 6571
+ 1735  f20e 8557 8541 eb49 0a16 fe30 e58b 2a46
+ 1736  d092 465b 940d 2696 414a da7d 8b35 c62c
+ ....
+ 1868  dedd aa8c 8327 a219 e035 6950 2d2f a6d9
+ 1869  e0d7 a298 8980 1259 71f0 d606 5b00 a300
+ 1870: 5015 0932 5def a437 ea8d 5b9a 3c01 63be
+ 1871  3ff4 a832 569f a6d0 b912 e98b ae61 8d88
+ 1872  73d5 5717 6fd2 530e de6c 6331 3885 0526
+ ....
+ 2132  9269 8432 492f 3ce7 b738 e798 ab67 5f13
+ 2133  9bb2 4715 1ae3 7a26 8f2b db90 aa0c 3db4
+ 2134: 1def b60a 414d 0757 3f62 4795 932e 35a2
+ 2135  446f f0ed 3902 bd9a e4da 26c9 3229 3d8a
+ 2136  7310 189e 3b00 05af 01d4 48b6 5778 55d6
+ ....
+ 2173  d09a 5c62 906b e993 7c63 b49c efef d972
+ 2174  367d ad15 63bf afea 38f6 a9b1 df15 777c
+ 2175: 342d d4a1 1deb bdef 1ac5 901b 521f 7060
+ 2176  0008 5c27 b8e9 d47c 8cf0 1270 04fb 95d7
+ 2177  9340 528d 7388 07fa 9057 61cf ef3f 9be2
+ ....
+ 2571  c05f c2a2 ef54 e5a8 97a8 268f c18e d981
+ 2572  9a8d 59cb 9c0d f768 7728 1884 31b9 0d5b
+ 2573: f536 def6 cf8b 5293 c86f 7618 7e48 2c60
+ 2574  0e45 875b 0c73 9b37 e805 6d2f 0c38 62e0
+ 2575  0dc3 36ca 92ae 31f0 cfc0 266b c263 34d6
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/dl65xDm9ctFJI8dq-9Mepl4sSzayiE001_7PBtMbb-E.cache:
+  443  d500 63c5 e058 0d40 5667 2443 a7f6 9d77
+  444  284a 7243 ee3f 76b6 1b36 7f84 3dab d797
+  445: 602a adef 5a61 7568 e7b4 8c9a 688e da18
+  446  c777 4c08 7006 f2a7 168b 774a b154 cbca
+  447  3ba5 b42a 0548 8cfa 043e ef52 5ca1 4604
+  ...
+  822  65e2 438a 69ca a449 8af2 65ed 2c45 ff19
+  823  7550 f452 62f4 0f8d 11a3 0b04 e988 e124
+  824: 8dc9 1def 2f0d 09c2 6c1a 8f0d b4b0 3d99
+  825  c7a3 5cb9 8877 3d9f c418 185b 91ef 3c1f
+  826  6213 401c 6502 88af c8cc 7005 4f20 8c61
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/dZiSt8E8zj4e3ObDUFEZQ3mTALsRpigfx3-Y3uv6QeY.cache:
+   17  51e8 3aae e307 a61b 6de3 8d1f e9b1 693a
+   18  baed 0260 85b1 677b 56e0 b85b 7beb d8db
+   19: efdd 7def b77f 74f7 97d2 3c8c bf3e 86d5
+   20  fe8b 9bdf 793a f6ef bdf9 dedf bcfb 65c4
+   21  8a2c 3c80 2f6e 7efc 42ec 80df f9d1 ddbf
+   ..
+   57  f6ee 0c44 791a 96af c9e7 ea97 41b9 ce80
+   58  16dc 6ab4 8259 17f7 0748 f5a1 7c5d 9c36
+   59: ef57 e6da 583b cdef 3dc8 5509 e578 55f3
+   60  696d b034 ce40 ced7 c3a7 cbf6 dbfb ea90
+   61  6adf bdd2 b42d d420 ab6d 7848 d2f7 775a
+   ..
+  197  b8c9 361f cdb2 291f af45 e195 6d3e f610
+  198  6fc5 87eb 5070 03d9 ecad c282 8fd6 25d1
+  199: 3aba 0268 57e0 70ac def3 317b 1466 d9e6
+  200  ed04 bfcd 47eb 5368 655b b76d 921e f868
+  201  2953 e1c8 366e d57e 05a7 1e3b c045 6ce8
+  ...
+  214  933f f2e1 52a6 cd33 a547 acc3 f7ab 2829
+  215  2291 5ea3 4c9c 6749 f77f 8f20 e48f 3a8b
+  216: b271 9e2d 1def b600 02a3 6c51 66ce 936d
+  217  e6d0 d44d a8d8 2cca d479 b24d 1d5a 6ee3
+  218  a3a5 4c9d 27db d46d d390 ef51 5a94 a9f3
+  ...
+  722  1345 d498 353c 59b1 ea02 94c7 3c2b 511c
+  723  04c1 45e0 b769 feb0 7a1c 3658 a132 49dd
+  724: b2b7 bed6 8def bf19 6a28 9551 0140 a685
+  725  59ac 7d82 a51c 78ae 4757 5392 40a2 a6b1
+  726  891c 254b 8c72 230c a759 f2c7 18f2 fe4e
+  ...
+  746  2edc 8094 e45b 92d5 94f6 ec9b 4ebc 7630
+  747  9e3d b40c dae4 694c 9066 7b0b 9396 64c7
+  748: 53f5 25ca def9 fca6 0461 11ed db14 0b88
+  749  71f3 2ea9 20fc 47d4 c5b5 2cf4 bd54 53b2
+  750  3ae4 df0a 6ef3 ee60 d43a a644 6a8b 304e
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/e4l81gOEdf00Y1Gfuw7vLjvUl3wxgxvfHLpj-foXw_A.cache:
+   38  fa43 fbdd a7bc d9e5 07f2 34c1 94e5 15e1
+   39  5d59 7dbc 232f 4814 bcba 5b3d e243 5656
+   40: aa5b f413 6545 defe 7175 2c4e 0ff9 e107
+   41  b5be f5f8 a955 8a0e 94e8 0a6f 7185 0f29
+   42  41bd 233f ac4e 757e 7820 5caa 7041 687f
+   ..
+   58  434d 483b 1d32 f2f9 3ffd e9cf bb97 d6f4
+   59  ad44 d64e 097d dfbb e629 a9df 9d3f f12e
+   60: 29ca e4dd 1e11 a1ad defd c94f ffe0 0fff
+   61  ec67 7ff8 d500 7475 28ab 3d2a c8e8 a3f2
+   62  4f91 5a1b 77f5 4fdb 57f7 5f23 bf31 ef3e
+   ..
+   72  3728 2f88 b2da e60f 293a 526d d1fe 7caa
+   73  c8cd 2d79 1311 e537 3b8c b2f6 df87 aa3c
+   74: 1def deec 514e 5aed f1e1 74f7 e680 1eef
+   75  ded4 643c b64f d6a7 3d21 b6a3 3acb eb63
+   76  8148 9f12 594e 3f70 a4fb 1e04 e9a7 2c2f
+   ..
+  813  ba2c 4e0d 6678 db31 7c2d 70bc 1531 af5f
+  814  5b64 39e9 3930 9cfc d14a 1e3a e41a 378c
+  815: 58ec 6b69 ac7b 3063 bdef 1f45 8fcd 18f9
+  816  e212 fffc 5122 d6d2 dae7 5956 e097 8e1f
+  817  1f94 77e7 ced7 f392 1105 96bd ac44 5892
+  ...
+ 1015  f680 46c4 73cd 11fc 5cab 3bba ab85 f38a
+ 1016  f4fa 4006 d054 919f 2b04 cd81 0d21 c1fe
+ 1017: 6825 2097 4e0e 60b1 06d7 d718 6ce1 defa
+ 1018  94ec f3e6 ed2f 47c8 77dc fd0a 9337 eb6f
+ 1019  77af 66ef b3
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/eRalQh5qYv8kmso4Lokgj9Q_G08eA39fkSwcRjgR70g.cache:
+   30  89cc 324a df49 da0e b73a fbc2 a943 9b5d
+   31  d640 adaa 2793 b686 2453 aa65 71a9 aade
+   32: 9ead 66cc adef 5ab2 0a7f 3ab5 da65 1d0e
+   33  fa55 745d 48dc 78eb c176 afcf c73b 2b81
+   34  b61a 829d 70c7 46af ed4e 6b71 ead0 a6c7
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/Hc-HihMT5ntM_pTWIFBkAtH38Ybqq8xqTSTK4SZpfc0.cache:
+  383  9bb7 cedc a7ad 35ff 1bc7 7bf0 fefd e79d
+  384  adf7 ef17 efdf 97ef dfcf debf 3f3e 6cf7
+  385: 0253 5d43 c5e7 c045 3e6f def2 bd80 8da9
+  386  bf5f cc46 c598 43d6 da9d fde1 7bf8 dfe0
+  387  025a 39eb 1f5e 1cfc 04ad 6d6d f5e1 bfe9
+  ...
+  442  14b3 ee57 9b78 512f 4f81 bfd3 56dd fce9
+  443  f4fd 981e c253 7721 dafc e9e0 a7df 0e37
+  444: deff f6be baf3 fe40 1ebf 3fdb 540f b7b4
+  445  ca27 e77d 32a9 a2cc be09 3702 5882 4ff8
+  446  3b79 f51c cf44 d856 f80f edcc c448 4fe5
+  447  2fa8 1296 3d4f ddbd d539 40d9 16a8 a6f3
+  448  fe0c fe0b bb56 1e40 67a9 5b18 7ec5 02f1
+  449: e601 4c37 85e3 f381 848f e060 7def 42fc
+  450  51de e157 d58d 454d 39db fa56 4486 6bb7
+  451  6b21 2002 3a7a e1e4 1da7 fde3 c3df b67b
+  ...
+  503  e898 15c9 a498 9d50 500b 9d3c 8e50 3b62
+  504  6dba f5e0 d183 bb5d e34f 4a7d 55b7 6dd3
+  505: 0def 57ea 0367 c85c 2a31 f6d0 1a46 6991
+  506  7eab 471a 851f b3a3 8fb9 33d9 ab43 93d4
+  507  7074 ae31 66d5 02a4 540a f27a 2eaf 5d3f
+  ...
+  784  daa3 baf6 ee08 e7c1 4c41 acba 3b62 dd72
+  785  10b9 6941 6f1b 8273 eae9 ed64 73bc 05ee
+  786: 0482 cdef aecd 7a1e 7a66 57da 8c85 1035
+  787  44b7 df6a 9a23 07c7 7ec2 995a 1d8c 28b9
+  788  e6a7 932f 431c b570 a31e c41b 5d00 30fc
+  ...
+ 1029  fa4c f323 bac0 b955 b75a bbf6 7c61 dda2
+ 1030  1156 9e07 d50d 2cc7 33ab 1596 ad35 540f
+ 1031: 8def 0b74 7bc8 09bd 14ad 7b13 385a fc0e
+ 1032  6dcf 0acc d0be 725d 42dd 3139 4be4 7228
+ 1033  ebbb b924 c529 a8fa 7ca2 fccb 8307 e116
+ ....
+ 1425  77be da94 131e df92 79c4 83b9 8e80 0e94
+ 1426  0a53 ce58 effc f649 d844 fb94 132e 6109
+ 1427: 67c5 9953 b501 0523 8e2c c196 f648 def4
+ 1428  412f 6e06 bdfa d895 7556 4721 1329 7b02
+ 1429  b70e 5b77 bc3b 7293 d3f8 03dc 2b61 20fd
+ ....
+ 1538  b8a8 7a9a 9f2c d312 ba2b 4811 d0d3 f172
+ 1539  8457 4a31 35e0 314b e70e 09d3 e498 c1d9
+ 1540: defd fbd6 9aaf c385 7ffd 4630 9d9c 3444
+ 1541  90b5 d55f 02ba e59f cc28 098a fe85 bde5
+ 1542  bf78 119c 6d41 7575 c0af 8735 353a a282
+ ....
+ 1703  6123 4760 3e64 c212 37e2 343a afe1 e11c
+ 1704  cd6d 6d3e 9bc8 0829 43e7 5ad5 cc35 c960
+ 1705: 6547 def9 eb69 d815 4e55 2617 5552 a8a8
+ 1706  d336 4a86 7829 c6eb 96bb 135d 4156 bc9e
+ 1707  bb26 25a7 cde9 7ccc 3194 35af acd6 9a6a
+ ....
+ 1709  9152 c11e 093e 4852 084f d973 bfe4 80e4
+ 1710  444b 6e83 ae1d 24ed 32ab 8ac9 2702 82c0
+ 1711: cca6 6de7 ddef 24f5 4e9b ee97 bc33 314a
+ 1712  46bf 19b7 1371 f5a7 7a50 9cc7 6a30 b1d7
+ 1713  0dab c14f c26a 801d e6c7 e76d b210 1527
+ ....
+ 1916  fa2c 6326 7ccc ce7b 2698 4d7d d3d9 a71a
+ 1917  430e 2945 9c09 dc43 98fd 739f ec89 6cf9
+ 1918: 2878 6215 ce07 1c41 8def d3b3 fe1d 0f8a
+ 1919  ab7a 18a2 ae00 bd6e 4536 0f11 d789 2891
+ 1920  e490 b963 9d98 ca00 3a6e d268 ba81 f792
+ ....
+ 2061  46af 9a9d c685 13fa 248a f5bc 4c7a aeff
+ 2062  6ced 3b6d b231 8dd1 2457 b56d ac1a ca3c
+ 2063: 34a5 2156 5c2c f678 5f36 63e1 dfde def0
+ 2064  cf91 e5f2 da38 762b ca32 ba4f c371 74ef
+ 2065  e1a3 7b5d 9b05 928a 2bfc 8673 ce13 51ce
+ ....
+ 2177  e281 3ee4 55d8 f3fb cf26 78ac ec59 189f
+ 2178  7857 cc52 dc15 03ec 5b86 967c 450d 1bf8
+ 2179: 2649 1a7e 3c84 9240 def4 8fd2 ac49 5542
+ 2180  582b 30d5 84c3 abe4 cdb4 018c 29d5 b414
+ 2181  f842 4887 f91e 8adc d820 23c7 70c4 b1c7
+ ....
+ 2349  2517 232a d8f0 37fb 58e4 3f66 204c e35a
+ 2350  a71b c810 06f2 18c6 01fc d3dc 7b77 afb0
+ 2351: c4e8 ecf1 455a 03b8 def8 402e 8ef2 9cd9
+ 2352  313a 2465 359f d1bf 0d98 5ffb 6e7b b1a2
+ 2353  1a05 25db 9e5e fc45 a79e 3937 10e7 ca8c
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/hipFuSZg27xprbFhwICWF-0kkPerl9yiYdSJzh4ZdbA.cache:
+ 1621  8b27 89c7 446d a6b0 2093 1ca3 5167 0947
+ 1622  4584 8570 bd39 ce1e 6bc3 549e a89c 75a0
+ 1623: 1118 cc53 0da4 adef 15e9 45e7 41a7 6536
+ 1624  ca86 88e9 810d 320c 6552 1f1b b642 91b4
+ 1625  4724 b213 c18d 4022 e4de c135 ed38 2be1
+ ....
+ 1678  4a14 ba1b ec74 fd62 3594 b1f3 87a1 2d6a
+ 1679  6eb4 66f7 31c6 bad9 627c 88de 6c97 c5f4
+ 1680: bfac c5f9 d436 0199 2191 3def 46d0 7a1d
+ 1681  51fe efd5 94f8 5041 8f1a ee49 916e 6212
+ 1682  1e58 d276 280f 74dc 1ba4 07eb 8d25 0b95
+ ....
+ 2083  7385 de24 a17a 0c32 d5f8 bd7f 5d6f 7bf5
+ 2084  e490 5243 53fc 2bd5 26b0 634e 3408 4071
+ 2085: 65ad 5def 0e0e 6d90 a1cc 43f3 52a9 fa96
+ 2086  57c1 aec1 6ecb 2e9e 1f0d fd19 56a1 1053
+ 2087  e5c2 61fd 71a7 4d2e 3842 41e2 a702 b14b
+ ....
+ 2336  8180 1049 a461 ab1e 4938 8993 8948 439f
+ 2337  f79c 1eeb fb94 5c33 05e9 c164 3992 94d3
+ 2338: 72c2 8030 f4c6 1316 77ad 8def da04 0f6b
+ 2339  7226 0de5 75ed 986f acc2 95b0 f578 f942
+ 2340  9069 e05a 0cf5 1e30 db46 7c4a 3a85 34b4
+ ....
+ 2580  ba0a 9cb6 f6b0 ce16 a4bf e3f8 f1c5 05fb
+ 2581  b536 bddb 8bce b356 5d08 4d9e 248f 3dfc
+ 2582: e893 e4de 60cb d517 1c66 ce68 bdef 2f11
+ 2583  884a c79a 6303 3eb7 6b57 8b0d ca86 4946
+ 2584  f3ef 57f7 fb25 a565 05d9 2447 3c53 0d66
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/Iin4GU4gYhcTARM-z-3PjvAGawDXkI9sfDfDZGO1K-A.cache:
+  567  5580 3444 45ae 6abd 0195 0655 eeeb 2cab
+  568  b460 cddc 33c5 1f93 6e4c 7831 d9c4 440f
+  569: 932c 4c70 30b9 c0ba 1def 55bc c7ea de68
+  570  426d f8c2 f8a2 d568 e6b2 a8d9 45db f852
+  571  feda 6aff fc50 4db4 268e d670 d76e f3c7
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/J3Ftyv9ltZTzENymji-_7QHSWoA74m1XjgMgYDeb1Vs.cache:
+   50  a709 fc31 919e c9f0 0727 83e4 535a 2a71
+   51  ed41 915f 9679 9975 da4c 13ed 6e87 cb77
+   52: 77f9 8bb7 194c 563e fa08 f373 6bfb defd
+   53  7b8f a9a9 296c 6498 86e3 020a c54b 29b4
+   54  31d0 3948 f6a1 d09a 8ccc 53ce a25c 66b0
+   ..
+  377  629c 5728 048e 2f4e f3f1 389b 5de4 151c
+  378  b217 e89f 7701 42d8 229f 4fb2 0b58 dad9
+  379: 057a 16e1 ddef 4262 09a1 ad11 bc18 6b74
+  380  091c b0e8 b081 f19b 252a 8080 bcf8 c58f
+  381  a770 dfa2 4867 0c7a 436f 0db8 bd3a 8bda
+  ...
+  442  ea5b 14b3 ee57 9b78 512f 4f81 bfd3 56dd
+  443  fce9 f4fd 981e c253 7721 dafc e9e0 a7df
+  444: 0e37 deff f6be baf3 fe40 1ebf 3fdb 540f
+  445  b7b4 ca27 e77d 32a9 a2cc be09 3702 5882
+  446  4ff8 3b79 f502 cf44 d856 f80f edcc c448
+  447  4fe5 2fa8 1296 3d4f ddbd d539 40d9 16a8
+  448  a6f3 fe0c fe0b bb56 1e40 67a9 5b18 7ec5
+  449: 02f1 e601 4c37 85e3 f381 848f e060 7def
+  450  42fc 51de e157 d58d 454d 39db fa56 4486
+  451  6bb7 6b21 2002 3a7a e1e4 1da7 fde3 c3df
+  ...
+  784  15b1 daa3 baf6 ee08 e7c1 4c41 acba 3b62
+  785  dd72 10b9 6941 6f1b 8273 eae9 ed64 73bc
+  786: 05ee 0482 cdef aecd 7a11 7a66 57da 8c85
+  787  1035 44b7 df6a 9a23 07c7 7ec2 995a 1d8c
+  788  28b9 e6a7 932f 431c b570 a31e c41b 5d00
+  ...
+ 1061  1fb2 b98a be27 9b51 7785 3742 200a 6271
+ 1062  1604 b91f 3e04 94fe dea3 c77f bfd5 f30a
+ 1063: 6b13 3ef8 162a 674e 0267 8a0d 4def e85b
+ 1064  93fb cdfa b3ab 4b3b 7572 689f 8446 3460
+ 1065  89b4 05d8 8ed6 5080 5f06 575a d3b4 fe6c
+ ....
+ 1110  4a54 6a66 deb8 0b4f 9e48 39fc bdb1 97ec
+ 1111  841e c79a 43b2 1e3f 18a8 b6a4 98ed 33fa
+ 1112: 83ff 4e5d defe 2fea f264 f1fb 2dba f6fd
+ 1113  0bd6 3c18 65bf 9f93 7568 f7f7 1adc c97f
+ 1114  4383 dbd8 b08b f80f 0f90 5252 4b40 993f
+ ....
+ 1540  e06c effe 7d6b cdd7 e1c2 bf7e 2398 4e4e
+ 1541  1a22 c8da ea2f 01dd f24f 6694 0445 ffc2
+ 1542: def2 5fbc 08ce b6a0 ba3a e0d7 c39a 1a1d
+ 1543  5141 a13f 30c2 f8ea 64c3 f146 cb32 c445
+ 1544  a41d aa7e 53f8 1685 bea5 6107 ebea 70d7
+ ....
+ 1703  803f 6123 4760 3e64 c212 37e2 343a afe1
+ 1704  e11c cd6d 6d3e 9bc8 0829 43e7 5ad5 cc35
+ 1705: c960 6547 def9 eb69 d815 4e55 2617 5552
+ 1706  a8a8 d336 4a86 7829 c6eb 96bb 135d 4156
+ 1707  bc9e bb26 25a7 cde9 7ccc 3194 35af acd6
+ ....
+ 1709  ea89 9152 c11e 093e 4852 084f d973 bfe4
+ 1710  80e4 444b 6e83 ae1d 24ed 32ab 8ac9 2702
+ 1711: 82c0 cca6 6de7 ddef 24f5 4e9b ee97 bc33
+ 1712  314a 46bf 19b7 1371 f5a7 7a50 9cc7 6a30
+ 1713  b1d7 0dab c14f c26a 801d e6c7 e76d b210
+ ....
+ 2177  e31c e281 3ee4 55d8 f3fb cf27 78ac ec59
+ 2178  189f 7857 cc52 dc15 03ec 5b86 967c 450d
+ 2179: 1bf8 2649 1a7e 3284 9240 def4 8fd2 ac49
+ 2180  5542 582b 30d5 84c3 abe4 cdb4 018c 29d5
+ 2181  b414 f842 4887 f91e 8adc d820 23c7 70c4
+ ....
+ 2244  1c8b 3cdb 6b88 e154 8bfc 4c42 2e84 3fde
+ 2245  16e1 8880 8b46 0bb2 6481 8c84 18dd 9e5c
+ 2246: 8def c642 738b fb33 4748 82d5 93b8 a4bc
+ 2247  3b2a 77ba ac2a 6022 e2c2 ca04 3bd2 7cc0
+ 2248  5d09 6b5c 552a 547f 390d 1452 32dc d260
+ ....
+ 2339  1aca ebda 31df 5885 2b61 ebf1 f285 20d3
+ 2340  c0b5 18ea 3d60 b68d f894 740a 6968 f55e
+ 2341: adef 1142 47a1 8482 9202 0685 d11a 5b85
+ 2342  7f6b 65a0 f25d f50b 0e1f 3f5a 2dc4 919d
+ 2343  6b13 ad5c c84c e6a7 646d 104b d866 b15c
+ ....
+ 2570  bb78 4234 b3ae 8d5a ba64 20f6 c05f c2a2
+ 2571  ef54 e5a8 97a8 268f c18e d981 9a8d 598b
+ 2572: 9c0d f768 7728 1884 31b9 0d5b f536 def6
+ 2573  cf8a 5293 c8af 7718 7e48 2c60 0e45 875b
+ 2574  0c73 9b37 e805 6d2f 0c38 62e0 0dc3 36ca
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/khf7amCJve_N5h8ms_jU-ajfgelL5145QZKk-HtUXwE.cache:
+    6  0124 99d6 74d1 419f 40f7 fd04 924c 32c9
+    7  4cee f8eb ee70 7720 2233 e11e c3a9 9ae9
+    8: ca04 1cc0 ef3d 7ffe def3 e7cf 9fff dbbf
+    9  fcdd afdf fdf2 a988 bfb8 f985 ff61 1727
+   10  e0ee f5eb d77f 5282 a27c fd77 bef8 d18f
+   ..
+   15  f058 bd86 bffd 761e e720 8953 f079 0992
+   16  dd6f c7d1 e7fa 66b3 b5c1 2e0c 3dc7 df00
+   17: d3d7 5ddd 0f36 3bdb 0f9d ad61 9bdb adef
+   18  d9be 6d39 db1d d81a 81e1 068e b389 36b6
+   19  eeb8 3bdd 338d edf7 eebe f7fb 3fbe fb77
+   ..
+  250  90ef 5fdc 17d9 44c8 c8a3 ed9f 692a 025b
+  251  3c5b ddd0 f6cf b414 d835 5ae7 c4f2 31d3
+  252: 06d0 b455 d878 3901 9a36 83a6 a344 defc
+  253  046a da18 9af2 7726 4c20 a6ed a129 db1e
+  254  fef4 04ca fa60 3d31 6eda 2a9a 1be9 d1ae
+  ...
+  683  1302 4a23 9096 20e2 ab58 419b 88dd 86ad
+  684  7605 6d38 ef61 ab62 411b 4a29 3b8d f5ea
+  685: b9bc d948 e272 23ab 001f 5e22 6def dbb2
+  686  71f2 8581 db24 6236 e188 02b7 09fb 2d1c
+  687  41e0 3699 cb68 4337 ae91 d3b8 fe6b 2c6d
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/kz5aw0SwGfxHQ8JzaxbANH8Qsj0LBnhYo2LsgahZ3N4.cache:
+   24  f2fe df96 5979 91fc 0b94 7c43 2593 6ff2
+   25  e332 8547 1fb7 07db db83 1d2c 74b6 58cc
+   26: 8124 deff 8265 07a3 62ba 094f f1c5 abd9
+   27  68b2 1c67 55f2 26ff f5d7 4906 7d32 c52b
+   28  7af6 beb2 1f3c 2fe6 1765 7e7a b648 76b6
+   ..
+  143  1a2b 07c3 037c 3e67 b2b0 6fe8 51cb 1ce0
+  144  c002 60c4 9e43 8130 e51e 85b3 4002 6939
+  145: ea91 5cf9 aaa2 def2 1fd0 5590 2b7a 4931
+  146  c7d2 b875 2670 9ae0 92c1 417d 4afc cf51
+  147  d8e1 d611 cedb 6f57 f83a 8737 dbf8 43ce
+  ...
+  383  be46 ae54 9b77 cedd a7ad 35ff 1bc7 7bf8
+  384  eedd a79d ad77 ef16 efde 95ef decd debd
+  385: 3b39 6af7 0253 5d43 c517 c045 3e6d def1
+  386  bd80 8da9 bf5f ce46 c598 43d6 da9d 83e1
+  387  3bf8 dfe0 125a 39ef 1f5d 1efe 04ad 6d6d
+  ...
+  442  be04 ea5b 14b3 ee17 9b78 512f cf80 bfd3
+  443  56dd fce9 ecdd 981e c253 7721 dafc e9f0
+  444: a7df 8e36 defd f6ae baf7 ee50 1ebf 3bdf
+  445  540f b7b4 ca27 177d 32a9 a2cc be09 3702
+  446  5882 8ff8 3b79 f502 cf44 d856 f80f edcc
+  ...
+ 1507  765b f5c6 e54a e6d4 e9a7 d942 74e9 68e4
+ 1508  d725 dd39 0a28 8361 b88c f907 0f44 ea27
+ 1509: 69f7 be9a c0ce 01b9 0736 defd c143 55f3
+ 1510  b77c eadf b106 218a d7f9 a498 9d12 5003
+ 1511  5b3f 946a ef3c 7cfc 7037 4285 7277 bc06
+ ....
+ 2140  fe0e 5747 b2ce f91b 6f0f 5d75 f319 63e6
+ 2141  1175 fe11 9d30 cbf4 dc7b c43a 8834 877a
+ 2142: 4655 1966 71bc 9c20 7a35 eb03 446d def2
+ 2143  4a04 bc21 ab02 c182 4870 2e07 9675 1af4
+ 2144  08ae 6726 78c3 c4f6 f93b ef5a 30e8 60a4
+ ....
+ 2754  7ce1 7801 ee3d 59c7 acbb 87cf 5f3c 7bfb
+ 2755  ecdd e165 bfdf bdc4 0747 ef8e f0f7 5328
+ 2756: f105 1201 0def c78c 7d00 1705 a628 67f4
+ 2757  31fc 6f7a 4a71 3aa2 9549 fe4a 39e3 1975
+ 2758  0315 c7e7 653a 7f9d ce45 ad50 ccd9 29e7
+ ....
+ 2786  f951 5703 bf03 ec23 494d c5bd 5ae1 a1c2
+ 2787  8be2 3357 4157 04b1 c787 e284 7a0c 8588
+ 2788: cfe0 d224 9def b9c5 0e2a b5ea 0954 25a8
+ 2789  288b 8772 e040 8fb7 0078 e8d1 917d 2f23
+ 2790  ea39 68c5 1d38 d422 a88a d2c9 1d2a 25a9
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/L-7UPESEZPpignAedb_jxQveAfCeAXpedT-h-MOgsZo.cache:
+  105  f84f 35f1 955b 67ba 33ab d961 47e6 f875
+  106  4f10 7741 3d5b 7682 008c 3841 8e1e b22a
+  107: 5be7 bc65 7240 a651 3def 5b56 b746 8a06
+  108  439a 09ca 8634 57cc a49c d802 44da 447d
+  109  1a51 f979 139c 7fdf de78 ff8b 4e80 baab
+  ...
+  251  b218 0919 85a2 fd73 9c99 c036 cf56 23d1
+  252  fe39 ee0c 768d 3639 b17a cca2 0174 bc39
+  253: 6cbc 1c01 2d9a 41c7 9f45 defc 086a d118
+  254  3af0 3b13 4610 8bf6 d081 b687 bf3a e1aa
+  255  3958 cf8c 5bb4 8a4e 041e edda 1423 9845
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/L36EcLfOEZm-W_r_oibxYtdEi4ZCCeTtJxwBc_eIkDU.cache:
+  295  8982 f2b0 cd04 89b0 065d 6ac3 905e 2c26
+  296  0f72 0095 73cc 3727 74c1 0d43 7ab5 98ba
+  297: 28bb b870 b841 17de 30a4 d78c 8130 def3
+  298  e1d2 764f 7ac5 98ba bc14 1f2f 6df7 a417
+  299  8dc9 4fe5 218f 05ea 8236 7cd2 0bc7 9c4a
+  ...
+  410  c710 dd58 eb55 b6db 4130 77da cacc 498d
+  411  b940 b60a 8bd2 5dbc 3fb5 26fa 1814 fb18
+  412: 7684 4ee0 f224 8def e3be 06d5 4535 9a20
+  413  c19d 768c a328 0104 c28d 1cef 610d 21a2
+  414  93b8 72e8 04c5 f70d 0ba3 b8cc 9300 6a9b
+  ...
+  480  0ad2 7deb 6576 5003 dfb6 6d53 419e 3758
+  481  2996 b717 c71c dfd8 9663 d9d4 7af1 d25e
+  482: c876 cf34 9674 72dc 62a2 80cd 1def 03b4
+  483  dba0 e262 654c 3365 da78 01f2 0083 3e48
+  484  0776 6d10 0e06 5132 edfd 4477 e026 9f81
+  ...
+  515  54a2 6f93 dec4 4a22 f2d6 0ee1 fbf7 aec5
+  516  d8f3 1f4e 83d0 a511 9adf 2501 f498 c243
+  517: 9c44 b7f8 8d53 c2bb 93e1 77b8 def7 9287
+  518  89f0 88db c126 68ca 895d 6a13 90b0 2b58
+  519  2ed2 78b7 209e 9dd4 6ce5 9ab1 5d7b 1867
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/mtuILBGrDTifGR8LDkD5lHKMdYO-MCrl2kyNpUs4EtU.cache:
+  168  82d4 492d cf0a 57b8 a8df 7f05 0ee1 f7bf
+  169  c8f0 267b 7aff d582 2e98 a0fa cbf7 78bf
+  170: c669 8ad3 6571 24fe def3 11bf ffea ee45
+  171  f036 d88e fcd4 b691 1707 6110 c556 ea85
+  172  eb75 18b9 aeed 202b 4991 8f3c 2ff1 2c37
+  ...
+  750  ef2b 8cca 64d7 a558 108c eb4f 594d e03f
+  751  d12e 6e64 e1dc 4b0d 25cb 7df1 ade1 b6ee
+  752: 0e43 adef 0052 5ba2 342b 68a2 097b 31d9
+  753  e1e4 1381 d931 a11f d51e 9147 8b1b 0ae7
+  754  e4ee 3f8f 25b1 3f90 6f22 3edb c48f 0129
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/NdRbco7oniKCw3j41sz2-0akLgrDmLWsf8O0QRSjiTk.cache:
+  384  7bf0 fefd e79d adf7 ef17 efdf 97ef dfcf
+  385  debf 3f3e 6cf7 0253 5d43 c5e7 c045 3e6f
+  386: def2 bd80 8da9 bf5f ce46 c598 43d6 da9d
+  387  fde1 7bf8 dfe0 025a 39eb 1f5e 1cfc 04ad
+  388  6d6d f5e1 bfe9 d661 77a3 edb8 206c a409
+  ...
+  462  8374 927c 3f49 6799 af0f d17e 6064 27a8
+  463  ae98 a779 d9bd a681 a74f 93ed ade4 029a
+  464: 79f1 686b abc7 0fff 007f defd e61b 7efc
+  465  7c6b 2bd0 5f13 1804 d92c 8fcb 742a 7e7d
+  466  18a0 6254 53c8 9fe8 ba3a 2d9c 71d7 6969
+  ...
+  701  1445 e94c eeea 2c62 1682 f08f 7de0 cea3
+  702  7460 d1f7 7962 259d e122 9f66 deb1 019f
+  703: c0d5 def7 0683 3024 3208 ba5f 0d4c 6a70
+  704  cea1 bcb9 7df7 eec3 4706 10c4 4d20 fb65
+  705  599e d624 31c7 0ccd 7be5 b954 8558 6999
+  ...
+  947  163b 5a4b b356 a336 87da 0b9e a8f5 bdb6
+  948  c558 16a8 602d 127f ebfd 8f5c 8820 b5b5
+  949: b1e7 0e89 e666 4058 def7 1ddb 9309 1077
+  950  ac5a 8f7c d9f5 abcb fe44 65b9 80d3 9679
+  951  e6ac d3cc e9bf 1b6b b873 b31a 9e7a 3378
+  ...
+ 1029  5cba 76da 3f6b fa4c f323 bac0 b955 b75a
+ 1030  bbf6 7c61 dda2 1156 9e07 d50d 2cc7 33ab
+ 1031: 1596 ad35 540f 8def 0b74 7bc8 09bd 14ad
+ 1032  7b13 385a fc0e 6dcf 0acc d0be 725d 42dd
+ 1033  3139 4be4 7228 ebbb b924 c529 a8fa 7ca2
+ ....
+ 1191  f78b 3545 f7c2 0ef9 1742 44a6 6a6c dd54
+ 1192  8d7f aeaa 7a36 5e51 75d3 0802 6abd d247
+ 1193: 5048 b991 7520 752e b229 5070 def3 9e82
+ 1194  30c3 af53 937b 155b 0e1f 9419 c1ef e7e4
+ 1195  c2a1 5e6b 4ab0 2d8f f990 cf72 f4fc f46e
+ ....
+ 1426  83b9 8e80 0e94 0a53 ce58 effc f649 d844
+ 1427  fb94 132e 6109 67c5 9953 b501 0523 8e2c
+ 1428: c196 f648 def4 412f 6e06 bdfa d895 7556
+ 1429  4721 1329 7b02 b70e 5b77 bc3b 7293 d3f8
+ 1430  03dc 2b61 20fd 1fb7 b61f 259c c2d7 25cb
+ ....
+ 1538  839b 4217 ae25 b8a8 7a9a 9f2c d312 ba2b
+ 1539  4811 d0d3 f172 8457 4a31 35e0 314b e70e
+ 1540: 09d3 e498 c1d9 defd fbd6 9aaf c385 7ffd
+ 1541  4630 9d9c 3444 90b5 d55f 02ba e59f cc28
+ 1542  098a fe85 bde5 bf78 119c 6d41 7575 c0af
+ ....
+ 1788  5388 c3cf 6971 86d9 5ece 39a6 1b9f e362
+ 1789  32e3 cf8e 4903 2ce7 1677 408c c820 dc54
+ 1790: 03cc 8f93 dc7a f0f0 d136 0e07 defe 089f
+ 1791  0e93 6d69 ed4f c564 9c74 c867 0015 5559
+ 1792  37ae a6b5 8679 80b4 9f6e 6ef1 a105 8e33
+ ....
+ 1866  31e3 7003 9821 d783 7c36 81ba be46 2b05
+ 1867  8212 57df a6e7 4024 667f 1a98 a467 6f9f
+ 1868: 7def 6e55 c6c1 13d1 0cf0 9a34 a816 e793
+ 1869  6cf0 6b51 4c45 4089 ac38 786b 832d 8051
+ 1870  00a8 8a04 99ae 77d4 1bf5 c62d 4d9e 8031
+ ....
+ 1916  82b5 e0e8 9e11 fa2c 6326 7ccc ce7b 2698
+ 1917  4d7d d3d9 a71a 430e 2945 9c09 dc43 98fd
+ 1918: 739f ec89 6cf9 2878 6215 ce07 1c41 8def
+ 1919  d3b3 fe1d 0f8a ab7a 18a2 ae00 bd6e 4536
+ 1920  0f11 d789 2891 e490 b963 9d98 ca00 3a6e
+ ....
+ 2066  c339 e789 28e7 5f0e c40a b416 0aea 9c8e
+ 2067  e70d 4627 88d1 920d bc5b 0194 c595 d2bf
+ 2068: 400f ddef 5a9c 87d8 82eb 49d2 a3a4 af4e
+ 2069  206a fdf8 56af 80d9 343e 96ce 5887 d4f0
+ 2070  77e9 aed8 309d 0e27 3a24 2f51 a628 9539
+ ....
+ 2161  7cf6 1b29 d1e9 eec6 219e 837c 060c 1983
+ 2162  5250 c24f 9227 937c f671 f3e9 134a 0bf5
+ 2163: f4c9 a6fc 0bd2 7099 1def ddde 4c6f 3f4d
+ 2164  9f6c a64f 9ff0 5890 f5ec ddd6 a9b9 bdf9
+ 2165  b4ad ee3c 2fc9 0365 5e61 dc16 012a 51b6
+ ....
+ 2409  2613 171c 2683 b4d3 e993 1c7a 773f 3322
+ 2410  72d9 7ef2 3819 637e c162 662f 8198 6082
+ 2411: a359 3562 8410 a61e f46e 6def dcdf 7ed4
+ 2412  f535 90cb 0388 8965 315e 8e72 9408 982e
+ 2413  fefa 3d54 fe48 c89a 4fbe 572f 1fb3 b9e6
+ ....
+ 2627  23da f0ae c42a c163 0a53 6352 a52c 9353
+ 2628  ed51 641a 5ca5 4ec3 4f6c 52ec 9a3e cca9
+ 2629: f5bf 4d7f 3def a794 1c54 9a50 ca62 1450
+ 2630  74ba 1e81 4088 cec8 d411 14e7 1db4 0567
+ 2631  8fe2 0f59 920f a781 5291 499f 4881 36f8
+ ....
+ 2667  1724 9bbe 2e1e 88a0 11b0 a06b c483 e093
+ 2668  2fa4 9e15 c798 330e 5d47 5037 5aeb eb8e
+ 2669: b795 3be4 aa39 5929 945c def4 42a7 0b17
+ 2670  c7b0 900a e28c 733c 882d 38a4 7772 e108
+ 2671  4f91 9e8d 31f6 ee1f 84db e40e b2d0 b142
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/Nmsdh0Xflf__td8l2PMP3fj7SCYuv4yBIILUb1Dc8VI.cache:
+   18  4276 e6a6 db18 074e 1ae1 24b4 b330 f352
+   19  e487 c136 4cd2 efdd 7fef 0f7e 7aff af16
+   20: 25ca 7e79 44cd ee27 6fff fee7 63ff defb
+   21  effd e1fd 6f52 561c d01e ffe4 edcf 5f89
+   22  1de4 3b3f bdff cf75 dff8 db4c 83f6 fadf
+   ..
+  581  620e 6e43 4bc4 2ce6 70d1 5ac2 e68c 5c74
+  582  1b6a c2e6 ac5d 7c1b 7ac2 e6ed 9de8 fa78
+  583: cb71 7dea 5def fab0 cb33 2c54 6b49 506d
+  584  06aa 4ea5 2d0b b1c3 20d6 fa3d cb82 ec32
+  585  9045 b767 5948 3d06 a9d6 eb59 1664 9f81
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/nunX_KalRE1gw39VQeAkCJWhl9_eiMmIbXhU07sNVqQ.cache:
+  145  8aa4 1a2b 07c3 037c 3e67 b2b0 6fe8 51cb
+  146  1ce0 c002 60c4 9e43 8130 e51e 85b3 4002
+  147: 6939 ea91 5cf9 b2a2 def2 1fd0 5590 2b7a
+  148  4931 c7d2 b875 2670 9ae0 92c1 417d 42fc
+  149  cf51 d8c1 d621 cedb 6f97 f83a 8737 dbf8
+  ...
+  297  150c 7216 dffc 32e9 ab97 f8a2 6221 612a
+  298  ae44 e800 b74a 6aa0 9aed b26a 4520 00b3
+  299: 3bc0 3ab7 a5ea 8e3f 16ce 4d8f 0def 64d1
+  300  23b3 4f95 7e52 6709 b87f 4ec5 d794 4463
+  301  5143 64c8 ef73 9025 616b e8e8 5ad7 9e78
+  ...
+  379  dbe0 629c 5728 048e 2f4e f3f1 389b 5de4
+  380  151c b217 e89f 7701 42d8 229f 4fb2 0b58
+  381: dad9 057a 16e1 ddef 4262 09a1 ad11 bc18
+  382  6b74 091c b0e8 b081 f19b 252a 8080 bcf8
+  383  c58f a770 dfaa e618 0e37 3a4d d15b 036e
+  ...
+  619  4714 7d9c f312 cffa 646f d046 693e 2934
+  620  c177 57ff 6c62 5830 05da ea0b 05d2 ae10
+  621: 3590 299b 5309 a0bd 96d5 def9 c269 97ce
+  622  b305 471b b582 6c33 68ae a5ab 279b 8959
+  623  c84c fac9 ad7b 0fef a2f2 9dc4 eca8 c53d
+  ...
+  908  8d73 530b 7eb3 8f5f 5ff0 07f7 13f4 aae1
+  909  82fe 437a f520 f9dc f8fc 6bf7 c979 f4e6
+  910: 6172 def0 18cd b7cd 9418 018b 444b 0b05
+  911  fc92 dc15 ab41 1ba6 ae6d b3cb 639e 8d3b
+  912  8964 1fab dc48 3d7a c5ba 5b7d 67bf b312
+  ...
+ 1028  758d 151f 7fd6 3b8d 4463 8e05 689d bf8a
+ 1029  d1d5 2dc0 ba53 162b 3368 4ca2 051f 8cf1
+ 1030: 1cf0 def5 a63b 6393 3e4b a1d2 b14f 09c3
+ 1031  a56b a7fd b3a6 cf34 3fa2 0b9c 5b75 abb5
+ 1032  6bcf 17d6 2d1a 61e5 7950 ddc0 723c b35a
+ ....
+ 1047  9fd7 25b9 b49e 2804 5aab 4197 4f7b e075
+ 1048  37df 2b37 02a3 aca7 6ae6 5281 1376 dc0d
+ 1049: f570 5edd 170b ea27 79fe 2449 ddef 04a2
+ 1050  d9a9 fb60 89db f3c0 fb7b c193 c8ed c96a
+ 1051  58a5 8f4f 5c54 9e19 222c 69fb 47f1 5131
+ ....
+ 1093  1df1 0f1f 260f 7757 3888 0f93 afa1 c6c5
+ 1094  68a0 e860 8e3f 3f4e 1e48 fa72 45b4 35a1
+ 1095: 5a9d 9dae e669 6120 68ba defd cefe f50d
+ 1096  10cd d8a9 d84e 6cac 7b35 a897 8827 30b5
+ 1097  5cc7 5ad6 033d 9650 c2a1 f5ef 7714 23fc
+ ....
+ 1718  1eee 7b9e fb2c 9ac8 c9ad cc82 206f d61c
+ 1719  adac 318e 7cd3 2763 59a8 01ce 5c20 960e
+ 1720: 7012 9a04 d5ba 2f32 3782 82a1 5def cd3b
+ 1721  70be 3d87 6ad1 74f2 6d8a d696 e3d9 1b99
+ 1722  1287 7daa 22d3 f14c b803 b716 b625 b3a7
+ ....
+ 1949  e564 2b49 4b5a d78a 0076 f642 cea7 1da5
+ 1950  29f2 7de3 5b1b faf7 4f8a 2398 45b1 c810
+ 1951: 0def fa5e 337d e595 f84c 488c 90c7 950e
+ 1952  5c30 7113 42ff 097a 00f5 bb49 ba5c 14d3
+ 1953  9492 9651 50e1 48a0 44a4 a78e 1ff0 7381
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/nwImkmiXXLQ5HRErjR3oNRYqKZcLmxl113IEzKBCV9E.cache:
+  201  d5fb 0d9c 7adc 022e 6243 bf5a 7b57 de1c
+  202  623e 56ca 5238 8e02 dc4d 2bbe 32a3 5d33
+  203: 47b6 692b def3 b152 76c2 916d d74a 7028
+  204  ee04 826b 5378 65db b5ef 8ae2 b049 733e
+  205  60ca b239 810a 808b 9340 7c29 ebe6 cab6
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/O8KI7y77s0S72sayXf86CPCnubBnYhAhCWaOSrOVeFY.cache:
+  106  9d27 056f 991c 9069 d4c0 fb8e d59d 91a2
+  107  c190 7682 b225 cd15 3329 27b6 0091 b651
+  108: 9f56 547e de46 e2df 7637 defe a217 a0fe
+  109  2a99 98e3 46bc 482c de3e 2757 5b3a 87e0
+  110  4f17 b544 8794 0c88 ee5d adf7 76aa 6a2a
+  ...
+  134  b2fd eaf5 564d db6f 9e09 5fad 7ef7 8efe
+  135  e73e c1c4 b7c7 ddcf 68db f4ee 161f c764
+  136: d628 56bf 9def 8f65 d5a0 433b bfe2 629b
+  137  d2bd d6ea ec50 4607 13d5 b552 836e b555
+  138  df82 f4c3 c8a2 2b84 f045 1e21 ca17 744f
+  ...
+  141  f8f7 abb7 ab2f dfae 50d3 545f d246 5fad
+  142  de7e f556 c61c 5e1f f3b8 a633 85bb 6da5
+  143: 06ee 4231 fbdf fed1 db2f def6 c8ef d8ab
+  144  dfa0 4754 a755 7e6c eedf ea28 53d0 717d
+  145  393f 761a a05d a2fe d5a9 ec57 5095 ce48
+  ...
+  152  bf72 3bf1 25e8 cba7 e157 0e70 707d 7915
+  153  b032 32d0 2a0d 9d08 84ce d591 6e0e e831
+  154: 4195 38b6 86b4 101e def5 7b7e 9334 87d5
+  155  d7ab 4d4a 9c95 86f2 7493 55e5 91f8 ce5f
+  156  f3b7 38fd b66e cae3 5aef c770 3445 f6f5
+  ...
+  509  24b8 8167 4796 224b e21a 47e3 7168 5192
+  510  543f 6f0f 4bfc c55d f74b 861a b426 e809
+  511: 5454 acbb 5b5c def7 0e17 478d cbd9 6d91
+  512  5327 d65e 3b0d 535c d464 d23f 6261 d389
+  513  73ed 0ccb d62d f8d5 a96c 30bf 9989 3abf
+  ...
+  528  de11 cab2 6a58 9831 66f0 0e41 09f5 f622
+  529  f504 f4f3 8b4c 5a66 232d f497 bb37 1f12
+  530: 624d 8f54 e46b b43f cadb defe 141f 8af2
+  531  6ef5 a7e5 01a5 e4df 3f68 4b7e a1fa 6ef5
+  532  f60f ca53 9593 befa 33fc f4f6 6eb5 2f0f
+  ...
+  737  cc14 e8d3 45e6 45ef 1024 e6d3 dff1 421c
+  738  82bc 7cfa 3b58 1cbc b4f4 7be0 6571 b9fe
+  739: b2f4 e52c 66a9 9ab6 14b3 def1 2216 7f02
+  740  0edd 3b84 6e12 bc0f d67d fefc 266c 5b56
+  741  fbb1 9bb6 392e 32d2 9c4f 49b2 c62c dbfe
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/OIE1GzPmEp5wfLWwDp9jG1KbbzkpIfT8W6AoHE2Ub4Q.cache:
+  442  9014 24e6 0ba0 be45 31eb 7eb5 8917 f5f2
+  443  14f8 3b6d d5cd 9f4f df8f e921 3c75 17a2
+  444: cd9f 0f7e fefd 70e3 fdef efab 3bef 0fe4
+  445  f1fb b34d f570 4bab 7c72 de27 932a caec
+  446  9b70 2380 25f8 84bf 9397 cff1 4c84 6d85
+  ...
+  929  948c 2605 c918 7cb0 027f e579 3375 6b8d
+  930  0367 d168 7729 0c5d 1ebb 74b1 f205 1a3f
+  931: a297 defc 48f9 1bb8 1ce3 9364 27ec c148
+  932  959b c5d9 f28b b365 5994 36b2 1b2f a46b
+  933  7245 5947 330c 88c1 7670 f1be ae44 55a4
+  ...
+ 1250  f4da abae 0fc0 6ade 59b9 eeac c876 270b
+ 1251  1692 cb6a 8d8d dbef 5df1 bfa9 73d5 d0ba
+ 1252: 5def 80b2 2666 6cfe ad8b 3edc 8d40 dd08
+ 1253  0f1e f6e7 724e 37e1 8caf 2673 e7a2 a15d
+ 1254  6a45 cad9 a6d0 4e95 751d 549e 4e94 8779
+ ....
+ 1427  d13e e584 4b58 c259 71e6 546d 40c1 8823
+ 1428  4bb0 a53d 9237 7dd0 8b9b 41af 3e76 659d
+ 1429: d551 c844 ca9e c0ad c3d6 1def 8edc e434
+ 1430  fe00 f74a 1848 ffa7 aded 8709 a7f0 75c9
+ 1431  b25c 3b62 5a91 af9d b3dd 3aa5 4d64 cf2f
+ ....
+ 1709  2704 d572 a09e 1829 15ec 91e0 8324 85f0
+ 1710  943d f74b 0e48 4eb4 e436 e8da 41d2 2eb3
+ 1711: aa98 7c22 2008 cc6c da76 defd 4e52 efb4
+ 1712  e97e c93b 13a3 64f4 9b71 3b11 577f aa07
+ 1713  c579 ac06 137b ddb0 1afc 24ac 06d8 617e
+ ....
+ 1981  6574 ca12 04a1 55b9 4b21 2c15 45f0 e715
+ 1982  1bf1 b3c5 1986 5505 15d0 e905 4754 d997
+ 1983: ddef a4f2 8112 b99f 5ffe db8d 6f60 c12c
+ 1984  a2a7 82d2 c44a 663b 2361 39cb 42c6 7ae7
+ 1985  8975 4aee 9303 7f92 4cb3 0949 e80a af75
+ ....
+ 2280  7b2a 5b40 5777 fc05 d8da e29d a679 2dec
+ 2281  21a7 0793 a371 b949 55ba 6ede 0abf b288
+ 2282: c9d1 ab65 1cc9 3d13 1f82 2def 5142 5811
+ 2283  b8d3 6228 df4d ab5c 1034 9c60 1b54 6e44
+ 2284  ea46 45e2 baf1 1e50 d2ae 50a3 4ff9 5ded
+ 2285  83c0 55cc c7f2 abf4 688f ddae bf7d 05c9
+ 2286  ecbf d1d8 69c1 a508 275a 610f 58f8 30f1
+ 2287: 98ec dbbf 027c 5964 d506 6863 def2 8130
+ 2288  1c80 2987 28cf 1a40 1029 687c fd91 9606
+ 2289  afd7 b516 9a92 cc1a a45d 9d4f ccb2 e3f2
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/OpXBXSJeXuXb-B36gGhIcMyvDQUpK2Mcw59QDR05WVM.cache:
+  152  3bf1 25e8 cba7 e157 0e70 707d 7915 b032
+  153  32d0 2a0d 9d08 84ce d591 6e0e e831 4195
+  154: 38b6 86b4 101e def5 7b7e 9334 87d5 d7ab
+  155  4d4a 9c95 86f2 7493 55e5 91f8 ce5f f3b7
+  156  38fd b66e cae3 5aef c770 3445 f6f5 692a
+  ...
+  458  df71 c1c4 2b8b c860 5394 f624 12ec c915
+  459  72cd 3970 b43a 17c1 46ff e982 228a 1055
+  460: ba8d b0cb cdb4 370e def3 b3ad 2bab cf4d
+  461  1bb9 a74b ff2d eaf6 b73e 384b 2ff2 d86c
+  462  086c ed12 bf04 aebd caa3 7320 d0a5 f830
+  ...
+  528  9655 c3c2 8c31 8377 084a a8b7 17a9 27a0
+  529  9f5f 64d2 321b 69a1 bfdc bdf9 9010 6b7a
+  530: a422 5fa3 fd51 def6 f6a7 f850 9477 ab3f
+  531  2d0f 2825 fffe 615b f20b d577 abb7 7f58
+  532  9eaa 9cf4 d59f e1a7 b777 ab7d 7928 5b17
+  ...
+ 1007  58c2 ad09 1dce b2ce d846 e666 d8fe 3196
+ 1008  6219 19e5 4289 c643 cf16 f63c cb73 958c
+ 1009: cf7e acbb 0d54 8466 5def 39ba bb33 1d25
+ 1010  ba69 5998 a138 bba2 2097 40b6 af20 d815
+ 1011
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/OSA4B8Hgz3rPdzFoYas0j6QCu3K2aGm5wSZeDN_RLyw.cache:
+  210  c079 3a11 7075 db8d 2edf 55e6 328b 5c8d
+  211  efe4 b8be 13d4 f8ce c81a 8b60 1529 2cab
+  212: f1a3 db40 1979 8def a435 7e8c af31 dd15
+  213  e87a 8e7b 8d8a a9e3 dd3e 23c8 aa1f e918
+  214  ed8d cb2a ead5 a7dc 192b b70d bb02 186d
+  ...
+  290  7642 0acb d45f 8255 93ab 7f8d aabf 1c56
+  291  ff9a affe 4b72 51f1 eadf eb85 827a cb74
+  292: c80c 633c fdef 1141 a5cc 5acf 06b0 8f19
+  293  40cd 3580 1afd 090d a006 206b 9b60 003b
+  294  38ee 7d0b a871 5cd7
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/OvpQIKA3MLg_ZoXIuhAz68YZ9NU5HyV6J0Fo68WpUsU.cache:
+   74  e180 6670 1474 ccab 6a64 441d c555 1d38
+   75  b142 4067 5e28 a2fe 2b15 df23 e07b 2d75
+   76: 4c22 a152 ddef 0556 751c 87ce 6c18 a168
+   77  e8bc a6a3 718f 8b46 6228 24ae ae9a 7771
+   78  acd9 87e2 0c75 da21 e825 1739 956a c735
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/q1JSDaHV52uTZ8bH5Dj45ShczPP-8Nk8yGntRitsWJg.cache:
+  569  15eb c718 760b dfd2 92a8 0626 6b76 0b0c
+  570  3899 6acb 323e f661 a7ca 7508 9747 0045
+  571: 5da4 72fe a9e1 9212 3e15 def7 1c75 44be
+  572  4b44 5014 6b46 3e74 c914 0a71 5c31 aad8
+  573  d678 d4e8 764e 14e5 17e7 d978 5c79 575b
+  ...
+  735  7c15 759a 4301 e4f8 ea27 4381 8fd1 3d10
+  736  f816 e2e9 c09b ce3a e7ae 425a d9d9 dade
+  737: defc e1e5 f37e 8854 d2c7 e75b 8f77 1e23
+  738  fc0a b5e5 538b e8f1 c59a 5e32 e170 f617
+  739  e0e2 a4b4 cd08 b500 1d41 58a3 78f5 f2eb
+  ...
+  824  4125 f262 3ece f3ab 2308 d8a1 a7e8 a355
+  825  05e4 fd96 8064 192f 5876 8016 c760 7f35
+  826: 367e 0908 7def 1515 d61f 5ff1 8db8 0886
+  827  10ea 7f7d f1a6 facd dd3c 4edf 8655 39df
+  828  7474 c90d a0f0 71f2 9192 9dcf a818 851b
+  ...
+  995  d449 26c6 98b4 e367 44d8 5d1d 58d7 1358
+  996  4478 6646 02fa dc0e 367c d366 d733 1979
+  997: 44c3 f30e 67cb ddef cbe1 d071 3acd 5a46
+  998  2867 3152 ffea 4951 cc09 20e7 8854 d64c
+  999  8057 53df df47 f0ff 08e9 8aab c7ef 73f2
+ ....
+ 1039  7952 ce05 843f 4811 d094 24c0 570d 6cff
+ 1040  6f52 b9dc c49a 899e a51a 715f 719f 536a
+ 1041: 00b3 3388 def3 3035 407e 2897 f81a 7db7
+ 1042  022a bf99 ee85 1697 4d33 4631 e0a6 27e7
+ 1043  2817 333f ce37 d1e7 7465 3758 9701 4b25
+ ....
+ 1320  57a8 e3c6 8b26 ca54 e432 7867 d3d8 e6d9
+ 1321  f5ce 0b16 2a36 c602 873e 778e d3d2 7c79
+ 1322: 9def f47a e03c 4d0a fa19 8b0b a94f e204
+ 1323  0be7 b0e4 dd53 5162 8d38 4dcc 5261 62c8
+ 1324  3d8c b1cd 9cbf 9b71 8a08 3404 0110 7d65
+ ....
+ 1390  cf03 64a3 ed1e c1c5 f05f 5572 0f3a 470d
+ 1391  41a3 dd96 c755 feb4 3de0 39ce 74f0 1abe
+ 1392: def1 c052 1ce4 2cf2 72a7 0d5f 117a db1f
+ 1393  103a e032 9e2b 82d6 e0d3 fc13 aaac 1ca8
+ 1394  c6a6 c30d 6a93 e3d7 bc60 b541 bbe5 b176
+ ....
+ 1398  feb9 c5fc ab69 8678 82e0 07a3 1b92 b004
+ 1399  62d7 9334 4130 acbd dbb7 6e3f 7db2 993e
+ 1400: 6def da69 3160 3611 8007 7e24 a4df bed5
+ 1401  4e70 06b8 8574 3ce6 64a7 9d84 503e 2eb0
+ 1402  e4c5 6986 27fe c559 3ec6 3c2d 8d39 eb7b
+ ....
+ 2261  b603 149b a5bd 83c5 a1d4 7c68 8d63 ca6b
+ 2262  b191 e9fc 609b 5f7a 6ecc 1d86 373b 87ae
+ 2263: c71c 4994 b407 f407 8846 1def 69f5 8e74
+ 2264  2177 a6c0 f6ee a06d 2255 fe5e 0873 76e1
+ 2265  60e4 fa4e b2be 9e05 3e24 cc98 5f43 3c8b
+ ....
+ 2579  913f 5e99 c195 028e 2db4 bb30 f20a 8bae
+ 2580  02a7 ad3d acb3 05e9 ef38 7e7c 71c1 7ead
+ 2581: 4def f6a2 f3ac 5517 4293 27c9 630f 3ffa
+ 2582  24b9 37d8 72f5 0587 9933 5aef fb4b 04a2
+ 2583  d2b1 e6d8 80cf edda d562 83b2 6192 d1fc
+ ....
+ 2624  bb71 6ed3 325b 78f9 9e40 c725 4707 0156
+ 2625  abcf 0622 2909 aa82 e073 f37b 0172 962b
+ 2626: 5413 f949 41a1 3ec2 1eab 6bc6 34a2 0def
+ 2627  4aac 123c a630 3526 55ca 3239 d51e 45a6
+ 2628  c155 ea34 fcc4 26c5 aee9 c39c 5aff dbf4
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/qA5SQ_K-8l5VbFARlmt54BPfcW9-FcGqPwcYFJ1P2V4.cache:
+   22  837c e717 f7ff 6af7 8dbf c934 68af ffad
+   23  a27c 20bf 173d 59ff baf0 82ae 4d5a 1e1a
+   24: 7c68 bea6 7cfd d9db df19 38db defc edba
+   25  3c55 29b9 fc2f fd67 fffc 7bef 7eb4 2af2
+   26  035e 7977 ab17 2086 3c92 9dc8 232d 15ab
+   ..
+   52  ab9f 3554 741e f001 57a4 cb3f 11be 350d
+   53  7990 d098 5618 3584 c0d5 013f d10f b4a8
+   54: 8f03 9255 9d96 47dc 72ef cd1b 3a16 defd
+   55  e877 69ab bf5b 9664 1055 e8b8 7a74 37ee
+   56  c65f 7db1 6b9a 23d1 ad0f b849 867b 1bc2
+   ..
+  110  90a3 c7bc ce93 82b7 4c0e c834 6ae0 7dc7
+  111  eace 48d1 6048 3b41 d992 e68a 9994 135b
+  112: 8048 dba8 4f2b 2abf 6c97 15de 7637 defe
+  113  aa17 a0fe 2a99 98e3 46bc 482c de3e 2757
+  114  5b3a 87e0 4f17 b544 8794 0c88 ee5d adf7
+  ...
+  881  b147 ad30 46d0 aebf 3f86 8b96 77aa eb2f
+  882  4de8 bb03 997d 7ec9 c973 0378 dc9b ba5a
+  883: d32a 2033 f0f3 699c def5 6b7b 8c76 5153
+  884  728b dd30 e11b 3698 8de2 14ba f42f 5b8f
+  885  e20b a6dc 6818 4462 397e 2f74 aebe 5bb9
+  ...
+  994  aee5 a842 1161 60a7 76bc a4dd 341d bd97
+  995  f895 5ae2 50ea c4fc 9a1c f466 9a8e 383e
+  996: 59bc eb4d f506 82ee def3 9cca 4bd8 122f
+  997  872d 7c92 3e77 471e 04ca 6d34 2c43 156f
+  998  db68 df66 dc43 a3ec 0af5 161a 75d3 f96f
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/QICr_zDanqvTUpyy9BL34BbtVsjGzQ1M5NuQIuJXMyk.cache:
+  305  6901 2f33 7316 99ba 2eb3 f5a9 d657 31b4
+  306  c51a 1736 78b9 1919 bc99 fba2 d901 af3d
+  307: 733a 349b 95b1 def8 4845 2fc0 6bcf e0a7
+  308  233a 1800 8bd6 12bc ec4c 7f12 ad39 da21
+  309  55bb 00af 3c73 c66d 882f 4915 2fe0 0bcf
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/QsBkEAKGqbP9Mgx4M-tJk9IlVM2qx40wByEwyOmsjUE.cache:
+    3  84c9 cbe7 90c0 0ca4 f31a 593e b655 14cb
+    4  9564 20c3 9a8b aed5 de76 f5a6 bd6c ff41
+    5: dfb6 bfa0 bdef 4d57 7f40 7bd1 5fd0 aeb9
+    6  ef3e e748 b2b6 7c14 db89 df8b ae61 c092
+    7  8e9e bdf7 39fb fb1c bb2f f32d a30c 7d26
+    8  8e6b dad5 9de9 a9db d93b d9d5 3579 7e97
+    9: 58c4 f0cc cf44 def5 c867 b290 56d2 4fb6
+   10  958c 5bd1 77a6 97d7 d737 48b1 78cb 28dd
+   11  2a18 85d5 22d1 efe4 eede d934 d637 ee6e
+   ..
+   95  e62b 0473 a3f5 fe0f 7a65 347c 6582 57e0
+   96  c9f3 e90b a0f5 fe6f c837 4f08 8703 c6b4
+   97: deff 4e98 ef31 5a81 e483 56c0 1ecf 4083
+   98  54f0 31a4 8250 a7b0 4490 a7ec 2c13 a4f9
+   99  945b d18b f617 9936 006a c430 4ba6 0175
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/QW1lrO_NImmxOFL4ItSxyR0X1BVfk9YsdSAmKmYjmEs.cache:
+    1: 78da d53c 4d8f 2447 5678 41b3 def6 9a5d
+    2  1fd6 1821 4474 6970 558d abb3 bac7 f359
+    3  edb6 19cf 076e 616b 87e9 1ec9 62d4 cc44
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/SefIIbfDHbd3olNDaQdZmS6aS79EiZyy1b4qrQJiXTo.cache:
+    3  a340 6ae4 44a9 e551 24c7 e9d8 e330 00b1
+    4  1411 9304 0340 b215 4f3a d343 1fb7 76a6
+    5: 333d b733 edad 7f41 72ee f4d0 defa fa07
+    6  7aeb a5d3 f6de ee62 8105 be05 9622 2d47
+    7  331e 2fc8 efdb fd1e bfef b18b e5d9 dc8b
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/SqfkVgL25kxpyR8zDuRDDEHFyU5NxaCkvdVpYKh8S1g.cache:
+  219  c292 f171 9f67 801f a9b6 2843 e7c9 3674
+  220  f779 7a3a 00e1 b4c8 a24c 9daf ab81 19d9
+  221: 683e 68ca def9 861a a04f 473e 64ca e6f9
+  222  b26d de4f 0bb4 c79c 8f97 3277 be6c 73b7
+  223  09c5 806d cade f9d2 0395 02ed 6653 b6ce
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/TwK5ScYJT8deTihX0QpOy-zO7pYAsO08ER-YjhGuZ0Y.cache:
+    5  7ced fe01 b783 eee8 6820 8200 464c 61c6
+    6  9888 1e30 0006 4c61 d613 98c2 b019 93a9
+    7: dfcc 5466 4a7b 9f73 94b9 9fdf bdef d53d
+    8  474a 49df 5ab9 72ad 952b 57ae fc97 7fe1
+    9  bb5f b9fb 8553 117f 71f3 73ff 6c17 27e0
+   ..
+   52  6eb5 2fd2 10bd 5ffb 8338 0469 0949 3ba5
+   53  11fc fc1f 7ef1 a3e6 a525 7a2b 94b5 d316
+   54: bdef 75f5 b02d 5ff7 9f78 bd4d b2ed eb63
+   55  0085 b678 fd07 5ffc f6ef fcd1 0f7f e7d3
+   56  0ea8 9666 c531 48e2 6f01 927f 8454 5f5b
+   ..
+  510  4667 6449 2c71 341e 8136 d86e 8b2f ebc3
+  511  12bf ba6d 7e89 822a 5841 f410 6a90 ac9a
+  512: 5b44 def7 0124 39c7 e56c b6c8 b113 6b97
+  513  4ec3 a417 35b1 f40f 9fda 7462 2e9d 6159
+  514  bb05 3f39 6515 2037 3321 e797 4af4 6dd2
+  ...
+  550  c18e c31b f4da 82c4 a868 4fe9 100e 1d2e
+  551  5d5b 1c94 89fc 9200 e8d2 02a7 6994 c8f5
+  552: 714e cfc1 c278 0cf0 be6f aa0b def7 c4e0
+  553  0d53 d7d5 456f 181e 2b84 6a49 5346 ab5d
+  554  728a a3bf 3c2a a9a1 97a1 98da 1b57 ab9e
+  ...
+  717  d69b f91d 11ec cc30 547e 1047 41ba 1f58
+  718  cf18 c36d 03e6 006d ee09 46f0 d040 3480
+  719: c718 a88e 1734 2030 4c34 100d def1 27a8
+  720  b12b 68c0 c3c0 6ac0 9717 3302 11b8 9681
+  721  db10 3473 dc12 8d05 830b 6f37 7fd4 9202
+  722  3ae7 bdfc f9ec 360c a931 6b78 b262 d505
+  723  28f3 2c2d 511c 04c1 45e0 7749 f6b0 7a1c
+  724: 3658 a132 49dd b2b7 bed6 8def bf19 6a28
+  725  9561 0140 aa05 69a4 7d82 a51c 78ae 4757
+  726  5392 40a2 a6b1 891c 254b 8c72 230c a759
+  ...
+  746  4b30 ce32 9766 5cb0 0509 c9b7 38ad 29ed
+  747  d937 9d78 ed60 3c7b 6819 b4cd 9288 20cd
+  748: f616 262d 4ef3 53f5 25ca def9 fca6 0441
+  749  111e da14 0b88 71fb 2eae 20fc 47d4 c5b5
+  750  2cf4 bd54 53b2 3a66 df0a 6ef3 ee60 d43a
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/V-BDWuzEUOpFNO_q6_eELU2MyrQkURrmAvjJNWnD2wY.cache:
+   17  843c 679b 46e4 c7ad 1b66 8917 0521 4a32
+   18  1767 db34 b082 24f3 63cf f7b7 a18b 9dd4
+   19: c208 8569 1c04 d8fe defd f7fe fecf eeff
+   20  f345 89b2 5f1e 51b3 fbc9 db7f f0e9 d8bf
+   21  f7fe 7b7f 70ff 9b94 1507 b4c7 3f79 fb67
+   ..
+  458  30ef a788 df71 c1c4 2b8b c860 5394 f624
+  459  12ec c915 72cd 3970 b43a 17c1 46ff e982
+  460: 228a 1055 ba8d b0cb cdb4 370e def3 b3ad
+  461  2bab cf4d 1bb9 a74b ff2d eaf6 b73e 384b
+  462  2ff2 d86c 086c ed12 bf04 aebd caa3 7320
+  ...
+  737  dc8a cc14 e8d3 45e6 45ef 1024 e6d3 dff1
+  738  421c 82bc 7cfa 3b58 1cbc b4f4 7be0 6571
+  739: b9fe b2f4 e52c 66a9 9ab6 14b3 def1 2216
+  740  7f02 0edd 3b84 6e12 bc0f d67d fefc 266c
+  741  5b56 fbb1 9bb6 392e 32d2 9c4f 49b2 c62c
+  ...
+  827  de74 39d3 fbc7 75ac 57c4 24d9 cc29 0f86
+  828  7be7 b53e 13ff 940b 822a ae08 6fbb 9c87
+  829: e717 50ad 2525 ee31 e16b 5def 318d e775
+  830  b7f4 f697 763c f322 5104 a4e5 52d7 09e1
+  831  e23c 940e fdd2 eee7 d314 67e2 5d0f 9678
+  ...
+  932  4e99 515e 5761 65ee 2af0 8c77 37c6 bbf7
+  933  6640 67bc 1a17 6e78 62b2 c140 c154 b31e
+  934: ec44 b3cd bc66 f733 d1b3 defd 4bbd 97cf
+  935  7fb8 cd1c a127 64a1 ec81 3759 f219 769c
+  936  72bb 6a99 1835 f863 4534 49f5 3c1b 7588
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/vUWMFUWlv32d2ipaw7IB3pgBZa-GSfa7nJKREaxKR-o.cache:
+   17  14a6 4e1c 268e 1df9 766c 3b99 8da2 2c21
+   18  577c 37c4 db24 4451 1227 9ebf 0d03 17a5
+   19: 7e9a c638 f56d 27fa defd f77e efa7 f7ff
+   20  5251 a2ec 1747 d4ec 7ef2 f6ef 7e3a f6ef
+   21  bdff deef dfff 0dca 8a03 dae3 9fbc fdf3
+   22: cfc4 0ef2 9d9f deff 8bdd 37fe 26d3 a0bd
+   23  feb7 8af2 81fc 5ef4 64fd cbc2 0bba 3669
+   24  7968 f0a1 f905 e5eb 4fde fe8d 81b3 edcd
+   25: bf56 97a7 2a25 97ff f97f fa9f 7def c7e9
+   26  0e55 04d4 eaed 9ffd f4f7 d7d1 dbf7 6fde
+   27  fdd6 9bd5 6fad 7eba cbeb 15f9 1f5a edd1
+   ..
+  138  d556 7d0b d20f 238b ae10 c217 7984 285f
+  139  d03d 9da4 d18c 8f5f 8da0 47eb 72df 2dc6
+  140: 77f1 4501 b2e3 5e1f f2cf 7615 defe 9ceb
+  141  cbde e2df afde aebe 7cbb 424d 537d 491b
+  142  7db5 7afb d55b 1973 787d cce3 9ace 14ee
+  ...
+  313  979a a991 be8c 842d 56e9 70c0 8bcc 18d3
+  314  3bc4 221d 0e78 8919 ca5d 8334 4422 5e68
+  315: a3d7 9def ad07 1c8b 8023 78b7 c204 58ac
+  316  cbe1 8097 99a9 b1c1 0b12 6b72 3836 bc99
+  317  2b8f c78f eb4c 7f5e 303d f65c 446d 2f03
+  ...
+  530  f321 21d6 f448 45be 46fb a3bc eded 8ff0
+  531  a128 ef56 7f54 1e50 4afe fbbb 6dc9 2f54
+  532: dfad defe 6e79 aa72 d257 7f8c 9fde dead
+  533  f6e5 a16c 5d6c 6147 e2f5 69e2 9d25 87a8
+  534  4b4f 728b e2ce 789e d79e 42c7 f7b0 6e1b
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/xKKwKQu0zCUB3DsS_MRoJSlaR7tnGpAexMp6YQBwYGA.cache:
+   68  c892 1cdf bd43 15d1 0977 ef52 5ca3 2c27
+   69  ca6a 936d 1374 a4da a2f9 f954 929b 1bf2
+   70: 2622 caef 7618 a5cd bfdb b238 1def deed
+   71  5146 5aed f1e1 74f7 ee80 1eee de55 643c
+   72  364f 56a7 3d21 b6a5 3acd aa63 8e48 9f12
+   ..
+  761  3f6b 90e6 59e2 6d1d b66d 2c8c 69dd 6dbf
+  762  ba5f 2cc5 2cc7 2bc4 4378 6e11 4484 728d
+  763: 0072 5b9a 42c9 f8d9 dee8 5691 defe f9cd
+  764  9fab 2774 f2b4 aee8 af34 e7ba 2e8b 7c9a
+  765  3fd0 53e5 7adc 86ae fb45 40ba db76 5e83
+  ...
+  835  ca74 bc44 7ce7 e335 4c70 3347 1dc3 8bdc
+  836  4751 6ff5 21ea 3333 2923 1776 2073 535d
+  837: 75dd 15f7 8d9c 5542 3047 e741 cdef 71e7
+  838  816d f652 de6b 9c87 be07 142b 07f3 731e
+  839  d4fc 9be2 3cf0 0d5f cac3 49ce 035d 64d2
+  ...
+  891  9500 c536 169e 246f 1624 29b7 486a 0934
+  892  ec72 d4ed de15 7699 ca8c 706d 6046 e853
+  893: 5578 a795 4df8 e0ca defb 4059 7bbb a2cc
+  894  be25 4851 3e04 6ca4 1b4c d846 fdd0 10bc
+  895  d13e 3b65 1331 37b0 e5dd 824c 21d2 e006
+  ...
+ 1005  708c 5572 cd05 5677 313c 55d4 90e7 58c1
+ 1006  4e1c 7c38 d234 f470 a2ee b8be 1326 cae2
+ 1007: 21a4 a371 49a9 f838 def9 0cc5 8e0b 47b1
+ 1008  c660 09b7 4674 38cb 3a63 1b99 9b61 f3c7
+ 1009  588a 6560 940b 251a
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/xxt1JIfz3akZcWRDxx4k9YtL283aAibzG0P7YxRR9Ak.cache:
+  131  fee9 bc13 8b73 3843 bd24 5759 562a d06a
+  132  652b 4821 2613 1649 afba ae4b b469 5631
+  133: a9b8 2bbc c3f0 f27b a143 f553 def5 e33c
+  134  c9cb 6a71 6da5 d92f 1d60 09ee 0310 666e
+  135  2edf dff6 1f64 bfd8 89d4 19c0 4d03 3c45
+  ...
+  685  69d2 e1d3 a7cb e320 9f5a 546e a0b3 75f3
+  686  d017 45d1 321e 558d 8c6e f57c 72d0 6182
+  687: e792 7366 1cf1 a9ef 3d4e f013 526b def3
+  688  6be7 f4e5 e239 26cd 7b9f dbc8 612f b61f
+  689  78fb 3fcc 5293 1b98 75f8 72b8 1a8c eac3
+  ...
+  716  f9aa 97ec bf3b 39ba 9b4c 2b22 3b09 99de
+  717  bf7b d77c cb70 6d89 e25c e0cb 279b fc10
+  718: 7ef0 e3a7 6def a5ea e5af 47e2 0c0d dbb5
+  719  bfbd 33d8 7ee8 7337 504c a29f 21ad 9cb7
+  720  a75d cc4a 6caa c94f fba8 17fd 82fe 7b6f
+  ...
+  902  c23b 942f 8fa8 53db ecfa c2b9 2230 1fc1
+  903  6030 6054 b91d 9848 b8af 4769 22e8 d5ae
+  904: 477d f059 0dde 8def e1ff cd28 f703 6678
+  905  38f0 75dd 4f3e 21b6 fc74 5ecc c469 f4d3
+  906  6ce3 c2d4 82df 1ce0 d797 fcc1 8304 bd6a
+  ...
+ 1422  1443 1f3a 9b3f 3de9 bc3b dfe8 beab eebd
+ 1423  db3c 78da 3918 3e79 b7f9 6efb e965 f78b
+ 1424: cdae 6f28 afde 680e accd 9f06 873f 0def
+ 1425  bc3b 7c37 e81d ddfb 6253 4e78 7c4b e611
+ 1426  0fe6 3a02 3a50 2a4c 3963 bdf3 db27 6113
+ ....
+ 1892  f71f d5eb a15a 2a10 9167 1f34 6091 760d
+ 1893  ec76 78fb 2509 45f0 f1ce a387 8fe5 e378
+ 1894: 49d7 220e a0d0 7192 188d def2 5db4 4e6a
+ 1895  9273 09fe 1731 0c64 0bb7 dc57 2d0b e8e6
+ 1896  b81d d990 90c8 507c 911b 881c 4fc4 3fd3
+ ....
+ 2625  4707 0156 abcf 0622 2909 aa82 e073 f37b
+ 2626  0172 962b 5413 f949 41a1 3ec2 1eab 6bc6
+ 2627: 34a2 0def 4aac 123c a130 3526 55ca 3239
+ 2628  d51e 45a6 c155 ea34 fcc4 26c5 aee9 c39c
+ 2629  5aff 9bf4 d78b 7e4a c941 a509 a52c 4601
+ ....
+ 2664  35e2 dded 580c 5be7 9389 9769 a46b 2ad3
+ 2665  a0f3 bb97 67e8 8caf ae15 5ad8 0a47 a91c
+ 2666: a085 e6c5 486c 62e5 48d8 b000 72b5 4def
+ 2667  e082 64d3 d7c5 0311 3402 1674 8378 107c
+ 2668  f299 d4b3 e218 73c6 a19b 08ea 566b 7dd3
+ 2669  f1b6 7287 5c37 272b 8592 abdb 5ee8 74e1
+ 2670  e218 1652 419c 738e 07b1 0587 f44e 2e1c
+ 2671: e129 d2b3 31c6 defd 8370 9bdc 4116 3a56
+ 2672  2834 557d cecd 439d 72bc 7911 f1f8 c80a
+ 2673  e188 12dc 6d43 2e94 8dd6 0eed e8de 79bb
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/YhsOBM0aLAaSYnsaWAChMHEa3MsY_cl_3MrRQBc8h7g.cache:
+   19  59b6 137c effe 7b7f f0f3 fbff 5a51 a2ec
+   20  5747 d4ec 7efa f6ef 7c3a f6ef bdff de1f
+   21: deff 75ca 8a03 dae3 9fbe fdb3 cfc4 0ef2
+   22  9d9f dfff 57bb 6ffc 0da6 417b fd5f 28ca
+   23  07f2 7bd1 93f5 df10 5ed0 b549 cb43 830f
+   24  cdaf 285f 7ffa f6af 0f9c 6d6f feb5 ba3c
+   25: 5529 b9fc cffd bbff d9f7 defd 7055 e407
+   26  bcf2 ee56 af40 0c79 243b 9147 5a2a 563f
+   27  7cf7 863c 76d8 d4a8 c0bf 2a4f cdea 376f
+   ..
+  601  6688 a94b 7710 368e ac02 5f3a 6558 c567
+  602  7d73 8a79 b9a8 1d21 579d d3c9 cb85 edf2
+  603: b05b 276f b968 3d1e 2def df2d 17b6 cfc3
+  604  e65d bbe5 c20e 78d8 beb5 68b4 a180 f646
+  605  f446 c4c3 0e6e 446f c4e2 aea8 45a3 edbd
+  ...
+  896  f6de 07ca dadb 9555 fe2d 418a 8a31 6023
+  897  dd60 c236 ea87 c6e0 8df6 d939 9b88 b981
+  898: 2def 1664 0a91 0637 c02d b932 8344 450c
+  899  4e85 babe 475f c2c0 e627 2c7d 86d2 da16
+  900  268d f6d5 a23b 6981 51b5 cd9f 6711 749f
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/yS2Xz2bm0chQcs1VDf6mV_Gy1jpRbuuSl9e6yi2eRDg.cache:
+   14  f49d 4ddf 8b6c 2f0a 4bf9 f3d6 98e2 eb47
+   15  6e5b 61a8 eb77 02db d6f5 5bbe 1fbd e1b7
+   16: ec82 becb 6c76 1db7 15d8 defd 395f 3f96
+   17  edf4 aadf eb21 0cb8 9faa 17cc 55cb 1dd8
+   18  f727 ae94 6e54 4fa9 da29 ed76 d36a b77d
+
+/Users/BILL0617/projects/workspace/artstore/tmp/cache/assets/development/sprockets/v3.0/YT4PCnhIYtBv_RFe7m_D-RmAxnki3AKVE4AoB_T9mtE.cache:
+   18  1b26 6ee2 6571 84ec c44f 232b 0b90 937d
+   19  effe 7b7f ffe7 f7ff 6a51 a2ec 5747 d4ec
+   20: 7efa f61f 7c3e f6ef bdff de1f deff 3665
+   21  c501 edf1 4fdf fec5 2bb1 837c e7e7 f7ff
+   22  a3ee 1b7f 8769 d05e ffd7 8bf2 81fc 5ef4
+   ..
+   29  0e65 e5d3 fd6a 6d1f 3fae d6e4 ceaa c2d9
+   30  fb37 dfbd f949 ba43 15f9 d2ea ed9f fffc
+   31: 0fd7 d1db f76f defd f0cd ea87 ab9f eff2
+   32  7a45 fe87 567b 74c8 b7b8 6e56 b467 56cd
+   33  0e35 3f28 8a55 8257 69b9 3f92 4bd9 2a3f
+   ..
+  110  c834 6ae0 7dc7 eace 48d1 6048 3b41 d992
+  111  e68a 9994 135b 8048 dba8 4f2b 2abf 68d7
+  112: 0ade 7637 defe b217 a0fe 2a99 98e3 46bc
+  113  482c de3e 2757 5b3a 87e0 4f17 b544 8794
+  114  0c88 ee5d adf7 76aa 6a2a 67c7 3227 0aaa
+  ...
+  584  a821 07f5 36b4 44c4 620e 6e43 4bc4 2ce6
+  585  70d1 5ac2 e68c 5c74 1b6a c2e6 ac5d 7c1b
+  586: 7ac2 e6ed 9de8 fa78 cb71 7dea 5def fab0
+  587  cb33 2c54 6b49 506d 06aa 4ea5 2d0b b1c3
+  588  20d6 fa3d cb82 ec32 9045 b767 5948 3d06
+
+464 matches across 98 files
+
+
+Searching 863 files for "find_by"
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/application_controller.rb:
+   21
+   22    def find_cart
+   23:     cart = Cart.find_by(id: session[:cart_id]) || Cart.create
+   24
+   25      session[:cart_id] = cart.id
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/cart_items_controller.rb:
+    2
+    3    def destroy
+    4:     @item = current_cart.cart_items.find_by(product_id: (params[:id]))
+    5      @item.destroy
+    6      @product = @item.product
+    .
+    9
+   10    def update
+   11:     @item = current_cart.cart_items.find_by(product_id: params[:id])
+   12
+   13      if @item.product.quantity >= item_params[:quantity].to_i
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/orders_controller.rb:
+   15
+   16    def show
+   17:     @order = Order.find_by_token(params[:id])
+   18      @order_info = @order.info
+   19      @order_items = @order.items
+   ..
+   22
+   23    def pay_with_credit_cart
+   24:     @order = Order.find_by_token(params[:id])
+   25      @order.set_payment_method!("credit_card")
+   26      @order.make_payment!
+
+/Users/BILL0617/projects/workspace/artstore/app/views/carts/index.html.erb:
+   32
+   33            </td>
+   34:           <% item = current_cart.cart_items.find_by(product_id: product) %>
+   35            <td>
+   36              <%= form_for item, url: item_path(product) do |f| %>
+
+6 matches across 4 files
+
+
+Searching 863 files for "cart_items.find_by"
+
+/Users/BILL0617/projects/workspace/artstore/app/controllers/cart_items_controller.rb:
+    2
+    3    def destroy
+    4:     @item = current_cart.find_cart_items(params[:id])
+    5      @item.destroy
+    6      @product = @item.product
+    .
+    9
+   10    def update
+   11:     @item = current_cart.find_cart_items(params[:id])
+  12
+   13      if @item.product.quantity >= item_params[:quantity].to_i
+
+/Users/BILL0617/projects/workspace/artstore/app/views/carts/index.html.erb:
+   32
+   33            </td>
+   34:           <% item = current_cart.find_cart_items(product) %>
+  35            <td>
+   36              <%= form_for item, url: item_path(product) do |f| %>
+
+3 matches across 2 files

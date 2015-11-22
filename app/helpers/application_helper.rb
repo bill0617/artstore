@@ -25,4 +25,5 @@ module ApplicationHelper
     cart.total_price
   end
 
+
 end
