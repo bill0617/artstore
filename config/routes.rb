@@ -14,7 +14,18 @@ Rails.application.routes.draw do
 
   # You can have the root of your site routed with "root"
    root 'products#index'
-   resources :carts
+   resources :carts do
+    collection do
+      post :checkout
+    end
+   end
+
+   resources :orders do
+    member do
+      post :pay_with_credit_cart
+    end
+  end
+
   # Example of regular route:
   #   get 'products/:id' => 'catalog#view'
 
