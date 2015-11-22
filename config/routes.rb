@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   devise_for :users
   namespace :admin do
     resources :products
+    resources :orders
   end
 
   resources :products do
@@ -28,6 +29,10 @@ Rails.application.routes.draw do
   end
 
   resources :items, controller: "cart_items"
+
+  namespace :account do
+    resources :orders
+  end
 
   # Example of regular route:
   #   get 'products/:id' => 'catalog#view'
