@@ -1,5 +1,7 @@
 source 'https://rubygems.org'
 
+gem 'devise-i18n'
+gem 'rails-i18n'
 gem "aasm"
 gem 'awesome_rails_console'
 gem "font-awesome-rails"
