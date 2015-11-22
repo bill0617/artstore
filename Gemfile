@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-
+gem "aasm"
 gem 'awesome_rails_console'
 gem "font-awesome-rails"
 gem 'mini_magick'

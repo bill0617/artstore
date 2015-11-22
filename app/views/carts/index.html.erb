@@ -1,7 +1,11 @@
 <div class="row">
   <div class="col-md-12">
     <h2>購物車明細</h2>
-    <p style="padding-bottom:0.5cm;"><%= link_to "清空購物車", "#", class: "btn btn-warning btn-xs pull-right"  %></p>
+    <p style="padding-bottom:0.5cm;">
+      <%= link_to "清空購物車", clean_carts_path, method: :delete,
+      data: {confirm: "確定要清空購物車嗎？"} ,
+      class: "btn btn-warning btn-xs pull-right"  %>
+    </p>
 
     <table class="table table-bordered">
       <thead>
@@ -9,7 +13,7 @@
           <th colspan="2">商品資訊</th>
           <th>數量</th>
           <th width="90">單價</th>
-          <th>Option</th>
+          <th width="1cm">Option</th>
         </tr>
       </thead>
       <tbody>
@@ -27,9 +31,19 @@
           <td><span style="font-size:22px;"><%= link_to product.title, product_path(product) %></span>
 
           </td>
-          <td><%= product.quantity %></td>
+          <% item = current_cart.cart_items.find_by(product_id: product) %>
+          <td>
+            <%= form_for item, url: item_path(product) do |f| %>
+            <%= f.select :quantity, 1..product.quantity %>
+            <%= f.submit "Update", data: {disable_with: "Submitting..."} %>
+            <% end %>
+          </td>
           <td><%= product.price %></td>
-          <td><%= link_to "刪除", "#", class: "btn btn-info btn-xs" %></td>
+          <td class="text-center">
+            <%= link_to item_path(product), method: :delete do %>
+            <i class="fa fa-trash fa-lg"></i>
+            <% end %>
+          </td>
         </tr>
         <% end %>
       </tbody>

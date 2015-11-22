@@ -17,6 +17,7 @@ Rails.application.routes.draw do
    resources :carts do
     collection do
       post :checkout
+      delete :clean
     end
    end
 
@@ -25,6 +26,8 @@ Rails.application.routes.draw do
       post :pay_with_credit_cart
     end
   end
+
+  resources :items, controller: "cart_items"
 
   # Example of regular route:
   #   get 'products/:id' => 'catalog#view'
